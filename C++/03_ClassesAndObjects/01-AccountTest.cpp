@@ -2,20 +2,15 @@
 
 #include <iostream>
 #include <string>
-// #include "Account.h"
-#include "AnotherAccount.h"
+#include "Account.h"
+// #include "AnotherAccount.h"
 
 using namespace std;
 
 int main(){
-    AnotherAccount myAccount;
+    Account acc1{"Jane Green"};
+    Account acc2{"John Blue"};
 
-    cout << "Initial account name is: " << myAccount.getName();
-
-    cout << "\nPlease enter the account name: ";
-    string name;
-    getline(cin, name);
-    myAccount.setName(name);
-
-    cout << "Name in object myAccount is: " << myAccount.getName() << endl;
+    cout << "account1 name is: " << acc1.getName() << endl;
+    cout << "account2 name is: " << acc2.getName() << endl;
 }
