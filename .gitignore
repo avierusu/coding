@@ -15,4 +15,4 @@
 *.jar
 *.war
 *.ear
-/.vscode
+/.vscode/**
