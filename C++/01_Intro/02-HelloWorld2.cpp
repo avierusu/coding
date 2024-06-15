@@ -1,4 +1,4 @@
-// Print text on one line using multiple printf statements
+// Print text on one line using multiple output statements
 
 #include <iostream>
 
