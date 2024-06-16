@@ -1,4 +1,4 @@
-// Contains a name and functions to set and get name
+// Contains a name and balance and functions to set and update each
 
 #include <string>
 
