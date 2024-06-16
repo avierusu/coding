@@ -1,4 +1,4 @@
-// Class average program with counter-controlled iteration
+// Class average program with sentinel-controlled iteration
 
 #include <iostream>
 #include <iomanip>
