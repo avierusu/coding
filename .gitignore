@@ -16,3 +16,4 @@
 *.war
 *.ear
 */.vscode/**
+.vscode/**
