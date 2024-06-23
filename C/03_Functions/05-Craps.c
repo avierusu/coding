@@ -1,4 +1,15 @@
 // Simulating a game of craps
+/**
+ * Each turn, the player rolls 2 dice
+ * On turn 1: 
+ *   - If the sum of each dice is 7 or 11, the player wins
+ *   - If the sum of each dice is 2, 3, or 12, the player loses
+ *   - Otherwise, remember the player's number
+ * For each of the following turns:
+ *   - If the sum is their number again, the player wins
+ *   - If the sum is 7, the player loses
+ *   - The player's number does not change
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
