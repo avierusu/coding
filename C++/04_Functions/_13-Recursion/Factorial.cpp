@@ -15,8 +15,8 @@ int main(){
 
 unsigned long factorial(unsigned long number){
     if(number <= 1){
-        return 1;       // base cases: 0! = 1 and 1! = 1
+        return 1;                               // base cases: 0! = 1 and 1! = 1
     } else {
-        return number * factorial(number - 1);
+        return number * factorial(number - 1);  // recursive step
     }
 }
