@@ -1,9 +1,9 @@
-Script started on 2024-07-04 10:44:05-05:00 [TERM="xterm-256color" TTY="/dev/cons0" COLUMNS="154" LINES="11"]
-[?2004h]0;/c/coding/C++/04_Functions/_13-Recursion
-[32m [35mMINGW64[0m [33m/c/coding/C++/04_Functions/_13-Recursion[0m
-$ g++ Fibonacci.cpp 
-[?2004l[6n[6n[m[?25h[?2004h]0;/c/coding/C++/04_Functions/_13-Recursion
-[32m [35mMINGW64[0m [33m/c/coding/C++/04_Functions/_13-Recursion[0m
+Script started on 2024-07-04 12:27:27-05:00 [TERM="xterm-256color" TTY="/dev/cons0" COLUMNS="154" LINES="11"]
+[?2004h]0;/c/coding/c++/04_Functions/_13-Recursion
+[32mavierusu@avi-T14 [35mMINGW64[0m [33m/c/coding/c++/04_Functions/_13-Recursion[0m
+$ g++ Fibonacci.cpp
+[?2004l[6n[6n[m[?25h[?2004h]0;/c/coding/c++/04_Functions/_13-Recursion
+[32mavierusu@avi-T14 [35mMINGW64[0m [33m/c/coding/c++/04_Functions/_13-Recursion[0m
 $ ./a
 [?2004l[6n[m[?25hfibonacci(0) = 0
 fibonacci(1) = 1
@@ -19,10 +19,10 @@ fibonacci(10) = 55
 
 fibonacci(20) = 6765
 fibonacci(30) = 832040
-fibonacci(35) =[1C9227465
-[?2004h]0;/c/coding/C++/04_Functions/_13-Recursion
-[32m [35mMINGW64[0m [33m/c/coding/C++/04_Functions/_13-Recursion[0m
+fibonacci(35) = 9227465
+[?2004h]0;/c/coding/c++/04_Functions/_13-Recursion
+[32mavierusu@avi-T14 [35mMINGW64[0m [33m/c/coding/c++/04_Functions/_13-Recursion[0m
 $ exit
 [?2004lexit
 
-Script done on 2024-07-04 10:44:26-05:00 [COMMAND_EXIT_CODE="0"]
+Script done on 2024-07-04 12:27:42-05:00 [COMMAND_EXIT_CODE="0"]
