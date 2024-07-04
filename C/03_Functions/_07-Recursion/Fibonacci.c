@@ -1,4 +1,10 @@
-// Recursive function fibonacci
+/**
+ * Recursive function fibonacci
+ * 
+ * The Fibonacci sequence is a sequence in which each number is the sum of the two preceding ones.
+ * For example:
+ * 0, 1, 1, 2, 3, 5, 8, 13, ...
+ */
 
 #include <stdio.h>
 
