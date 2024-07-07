@@ -1,0 +1,62 @@
+// Round numbers to various digits without using math functions like round(), floor(), and ceil()
+
+#include <stdio.h>
+
+// Function prototypes
+double roundToDigit(double, int);
+int roundToInteger(double);
+double roundToTenths(double);
+double roundToHundreths(double);
+double roundToThousandths(double);
+
+int main(void){
+    double number;
+    printf("Enter a number to round: ");
+    scanf("%lf", &number);
+
+    printf("%f rounded to:\n", number);
+    printf("Nearest Integer:\t%d\n", roundToInteger(number));
+    printf("Nearest Tenth:\t\t%.1f\n", roundToTenths(number));
+    printf("Nearest Hundreth:\t%.2f\n", roundToHundreths(number));
+    printf("Nearest Thousandth:\t%.3f\n", roundToThousandths(number));
+}
+
+
+// General function to round to any decimal point
+double roundToDigit(double num, int decimals){
+    double power = 1;
+    for(int i = 0; i < decimals; i++){
+        power *= 10;
+    }
+
+    int number = (int) (num * power * 10);
+
+    if(number % 10 >= 5){           // Determine whether to round up or down
+        number = number / 10 + 1;
+    } else {
+        number /= 10;
+    }
+
+    return number / power;          // Return the rounded number
+}
+
+
+// Round to a whole number
+int roundToInteger(double num){
+    return (int) roundToDigit(num, 0);
+}
+
+// Round to the tenths place
+double roundToTenths(double num){
+    return roundToDigit(num, 1);
+}
+
+// Round to the hundreths place
+double roundToHundreths(double num){
+    return roundToDigit(num, 2);
+}
+
+// Rount to the thousandths place
+double roundToThousandths(double num){
+    return roundToDigit(num, 3);
+}
