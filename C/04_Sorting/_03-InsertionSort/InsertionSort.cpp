@@ -31,11 +31,11 @@ int main(){
     printf("\nData items in original order:\n");
     printArray(nums, ARR_SIZE);
 
-    // Check how long the bubble sort takes
+    // Check how long the sort takes
     // Record the start time
     auto start = chrono::high_resolution_clock::now();
 
-    // Sort with bubble sort
+    // Sort
     insertionSort(nums, ARR_SIZE);
 
     // Record the end time
