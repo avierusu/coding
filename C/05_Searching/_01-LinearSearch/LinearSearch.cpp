@@ -21,7 +21,7 @@ int main(){
     int sortedNums[ARR_SIZE] = {2, 4, 6, 8, 10, 12, 37, 45, 68, 89};
 
     // Define the target value and declare its location
-    int target = 11;
+    int target = 37;
     int location;
 
     // Check how long the search takes
