@@ -1,5 +1,6 @@
 /**
- * Linear searc is the simplest search
+ * Linear search is the simplest search; it searches through
+ * the entire array from the beginning until the target is found
  */
 
 #include <stdio.h>
