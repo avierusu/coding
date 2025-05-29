@@ -10,8 +10,7 @@
 #include <chrono>
 using namespace std;
 
-#define ARR_SIZE 1000
-#define RANGE 9999
+#define ARR_SIZE 10
 
 int searchUnsorted(int* inArray, size_t size, int target);
 int searchSorted(int* inArray, size_t size, int target);
