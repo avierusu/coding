@@ -17,3 +17,4 @@
 *.ear
 */.vscode/**
 .vscode/**
+.github/**
