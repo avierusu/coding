@@ -47,32 +47,33 @@ typedef struct record{
 } Record;
 
 // Function prototypes
-void processData(char *, char *, Record [], int *, int *);
-void populateStruct(Record [], int *, int *, char *);
-void createName(char [], char [], char [], char [], char []);
-void createAccount(char [], char [], char [], char [], char []);
-float gradeAvg(Record, int);
-char *skipSpace(char *);
-void sortById(Record [], int);
-void sortByGrades(Record [], int);
-void sortByName(Record [], int);
-void readBinaryFile(FILE *, Record [], int *, int *);
-void writeBinaryFile(Record [], int, FILE *);
-long int getRecordCount(FILE *, Record []);
+void processData(char *inFile, char *outFile, Record student[], int *numRecs, int *gradeCount);
+void populateStruct(Record students[], int *numRecs, int *gradeCount, char *line);
+void createName(char completeName[], char firstName[], char middleName[], char lastName[], char otherName[]);
+void createAccount(char account[], char first[], char middle[], char last[], char studentID[]);
+float gradeAvg(Record pupil, int numTests);
+char *skipSpace(char *line);
+void sortById(Record students[], int size);
+void sortByGrades(Record students[], int size);
+void sortByName(Record students[], int size);
+void readBinaryFile(FILE *fpBin, Record student[], int *numRecs, int *numGrades);
+void writeBinaryFile(Record students[], int numRecs, FILE *fpBin);
+long int getRecordCount(FILE *fpBin, Record pupil[]);
 
 void welcome();
 int menu();
-void processMenu();
+void processMenu(Record students[], int *recordCount, int *gradeCount);
 
-void addDropUsingFile(Record [], int *, int *);
-void readAddDropFile(Record [], int *, int *, FILE *);
-void dropRecordFromFile(Record [], int *, int, int [], int *, int [], int *, int *);
-void addDropUsingKeyboard(Record [], int *, int);
-void addrecord(Record [], int *, int);
-void dropRecord(Record student[], int *size);
-void updateGrades(Record [], int *, int *);
-void readGrades(Record [], int *, int *, FILE *);
-void printRecords(Record [], int);
-int binarySearch(Record [], int, int, int, int);
-FILE *openFile(char *, char);
-void closeFile(FILE *);
+void addDropUsingFile(Record students[], int *numRecs, int *gradeCount);
+void readAddDropFile(Record students[], int *numRecs, int *gradeCount, FILE *fpAddDrop);
+void dropRecordFromFile(Record students[], int *size, int ID, int dropped[],
+    int *dropCount, int notFound[], int *notFoundCount, int *flag);
+void addDropUsingKeyboard(Record pupil[], int *size, int gradeCount);
+void addrecord(Record students[], int *size, int gradeCount);
+void dropRecord(Record students[], int *size);
+void updateGrades(Record students[], int *numRecs, int *gradeCount);
+void readGrades(Record students[], int *numRecs, int *gradeCount, FILE *fpGrades);
+void printRecords(Record students[], int numRecs);
+int binarySearch(Record rec[], int searchKey, int low, int high, int size);
+FILE *openFile(char *fileName, char *mode);
+void closeFile(FILE *fp);
