@@ -58,6 +58,13 @@ typedef struct record{
     float avg;
 } Record;
 
+// Define different sorting modes to be able to sort student records using one function
+typedef enum {
+    SORT_BY_ID,
+    SORT_BY_AVERAGE,
+    SORT_BY_NAME
+} SortMode;
+
 /*****************************************************************************************************
                                         FUNCTION PROTOTYPES
 *****************************************************************************************************/
@@ -68,7 +75,13 @@ char* skipSpace(char *line);
 void createName(char fullName[], char firstName[], char middleName[], char lastName[]);
 void createAccount(char account[], char first[], char middle[], char last[], char ID[]);
 float gradeAvg(Record student, int numGrades);
-
+// For sorting data
+void sortById(Record students[], int numRecords);
+void sortByGrades(Record students[], int numRecords);
+void sortByName(Record students[], int numRecords);
+void sortSubArray(int* inArray, size_t left, size_t right, SortMode mode);
+int compare(Record *student1, Record *student2, SortMode mode);
+void swap(Record inArray[], int firstIndex, int secondIndex);
 
 int main(){
 
@@ -272,24 +285,98 @@ float gradeAvg(Record student, int numGrades){
 }
 
 /*****************************************************************************************************
-    
+    This function uses quick sort to sort student records by their student ID in increasing order
 *****************************************************************************************************/
 void sortById(Record students[], int numRecords){
-
+    // Sort the array from start (index 0) to end (index size-1) by ID
+    sortSubArray(students, 0, numRecords - 1, SORT_BY_ID);
 }
 
 /*****************************************************************************************************
-    
+    This function uses quick sort to sort student records by the average of their grades in
+    increasing order
 *****************************************************************************************************/
 void sortByGrades(Record students[], int numRecords){
-
+    // Sort the array from start (index 0) to end (index size-1) by average
+    sortSubArray(students, 0, numRecords - 1, SORT_BY_AVERAGE);
 }
 
 /*****************************************************************************************************
-    
+    This function uses quick sort to sort student records by their full name in increasing order
 *****************************************************************************************************/
 void sortByName(Record students[], int numRecords){
+    // Sort the array from start (index 0) to end (index size-1) by name
+    sortSubArray(students, 0, numRecords - 1, SORT_BY_NAME);
+}
 
+/*****************************************************************************************************
+    This function sorts one section of the array by splitting it in two and recursively calling
+    itself to sort the smaller sections, until the full array is sorted
+*****************************************************************************************************/
+void sortSubArray(int* inArray, size_t left, size_t right, SortMode mode){
+    int leftSwap = left;
+    int rightSwap = right;
+    // Calculate the middle student record in the array
+    Record *middle = inArray[ (left + right) / 2 ];
+
+    do {
+        while ( compare(inArray[leftSwap], middle, mode) < 0/*(inArray[leftSwap] < middle)*/ && (leftSwap < right) ){
+            leftSwap++;
+        }
+        while ( compare(inArray[rightSwap], middle, mode) > 0/*(inArray[rightSwap] > middle)*/ && (rightSwap > left) ){
+            rightSwap--;
+        }
+
+        if (leftSwap <= rightSwap){
+            swap(inArray, leftSwap, rightSwap);
+
+            leftSwap++;
+            rightSwap--;
+        }
+
+    } while (leftSwap <= rightSwap);
+
+    if (left < rightSwap){
+        sortSubArray(inArray, left, rightSwap, mode);
+    }
+    if (leftSwap < right){
+        sortSubArray(inArray, leftSwap, right, mode);
+    }
+}
+
+/*****************************************************************************************************
+    This function compares the element of two student record structs. It uses SortMode to determine
+    whether to compare by student ID, student average, or student name.
+    Returns a value < 0 when student1 < student2
+    Returns 0 when student1 = student2
+    Returns a value > 0 when student1 > student2
+*****************************************************************************************************/
+int compare(Record *student1, Record *student2, SortMode mode){
+    // Check which sorting mode to sort by
+    switch(mode){
+        case SORT_BY_AVERAGE:
+            // Compare averages by subtracting and returning the difference
+            return (student1 -> avg) - (student2 -> avg);
+            break;
+        case SORT_BY_NAME:
+            // Compare names using strcmp and return the output
+            return strcmp( (student1 -> name) , (student2 -> name));
+            break;
+        case SORT_BY_ID:
+        default:
+            // Compare by ID by default
+            // Subtract IDs and return the difference
+            return (student1 -> ID) - (student2 -> ID);
+    }
+}
+
+/*****************************************************************************************************
+    This function swaps two student records in an array
+*****************************************************************************************************/
+void swap(Record inArray[], int firstIndex, int secondIndex){
+    Record temp = inArray[firstIndex];
+    inArray[firstIndex] = inArray[secondIndex];
+    inArray[secondIndex] = temp;
 }
 
 /*****************************************************************************************************
