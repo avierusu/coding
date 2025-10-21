@@ -53,7 +53,7 @@
 typedef struct record{
     int ID;
     char name[FULL_NAME_LENGTH+1];
-    char account[ACCT_LENGTH + 1];
+    char account[ACCT_LENGTH+1];
     float grades[NUM_GRADES];
     float avg;
 } Record;
@@ -79,11 +79,23 @@ float gradeAvg(Record student, int numGrades);
 void sortById(Record students[], int numRecords);
 void sortByGrades(Record students[], int numRecords);
 void sortByName(Record students[], int numRecords);
-void sortSubArray(int* inArray, size_t left, size_t right, SortMode mode);
+void sortSubArray(Record *inArray, int left, int right, SortMode mode);
 int compare(Record *student1, Record *student2, SortMode mode);
 void swap(Record inArray[], int firstIndex, int secondIndex);
+// Other
+void printRecords(Record students[], int numRecords);
+FILE* openFile(char *fileName, char *mode);
 
 int main(){
+    // Define an array of student records, as well as integers to store the number of records
+    // and the number of grades per record
+    Record students[MAX_RECORDS];
+    int recordCount = 0;
+    int gradeCount;
+    FILE *filePtrBin;
+
+    readData(TEXT_FILE, BIN_FILE, students, &recordCount, &gradeCount);
+    printRecords(students, recordCount);
 
     return 0;
 }
@@ -101,13 +113,13 @@ void readData(char *inFile, char *outFile, Record students[], int *numRecords, i
     char buffer[LINE_LENGTH];
     char *line;
     // Open the input (stuList.dat) and output (stuList.bin) files
-    filePtrIn = open(inFile, "r");
-    filePtrBin = open(outFile, "w");
+    filePtrIn = openFile(inFile, "r");
+    filePtrBin = openFile(outFile, "w");
 
     // Read through each line of the stuList.dat file
-    while ( (fgets(buffer, LINE_LENGTH, filePtrIn) != NULL) && (numRecords < MAX_RECORDS)){
+    while ( (fgets(buffer, LINE_LENGTH, filePtrIn) != NULL) && (*numRecords < MAX_RECORDS)){
         line = buffer;
-        numGrades = 0;
+        *numGrades = 0;
 
         // Read the data from each line into a struct
         populateStruct(students, numRecords, numGrades, line);
@@ -115,12 +127,12 @@ void readData(char *inFile, char *outFile, Record students[], int *numRecords, i
         // Write the data in the struct to the "stuList.bin file
         writeBinaryFile(students, numRecords, filePtrBin);
 
-        numRecords++;
+        (*numRecords)++;
     }
 
     // Sort the array of structs by student ID in increasing order
     // before sending back to main
-    sortById(students, numRecords);
+    sortById(students, *numRecords);
 
     // Close both files
     fclose(filePtrIn);
@@ -194,7 +206,7 @@ void populateStruct(Record students[], int *numRecords, int *numGrades, char *li
                 line = skipSpace(line);
 
                 // Increment grade count by 1
-                *numGrades++;
+                (*numGrades)++;
             }
 
 
@@ -223,7 +235,6 @@ void populateStruct(Record students[], int *numRecords, int *numGrades, char *li
         }
     }
 }
-
 
 /*****************************************************************************************************
     This function traverses the line character by character to skip all spaces and stop the pointer
@@ -259,7 +270,7 @@ void createName(char fullName[], char firstName[], char middleName[], char lastN
     middle, and last initials respectively, and "1234" are the last four digits of the student's ID
 *****************************************************************************************************/
 void createAccount(char account[], char first[], char middle[], char last[], char ID[]){
-    sprintf(account, "%c%c%c%s", *first, *middle, *last, (ID+1));
+    snprintf(account, ACCT_LENGTH+1, "%c%c%c%s", *first, *middle, *last, (ID+1));
 }
 
 /*****************************************************************************************************
@@ -272,6 +283,7 @@ float gradeAvg(Record student, int numGrades){
     // Loop through each grade and add it to sum
     for (int gradeIndex = 0; gradeIndex < numGrades; gradeIndex++){
         // Add the current grade to the sum
+        // printf("\n%d: %f", gradeIndex, student.grades[gradeIndex]);
         sum += student.grades[gradeIndex];
     }
 
@@ -289,7 +301,7 @@ float gradeAvg(Record student, int numGrades){
 *****************************************************************************************************/
 void sortById(Record students[], int numRecords){
     // Sort the array from start (index 0) to end (index size-1) by ID
-    sortSubArray(students, 0, numRecords - 1, SORT_BY_ID);
+    sortSubArray(students, 0, (numRecords - 1), SORT_BY_ID);
 }
 
 /*****************************************************************************************************
@@ -313,23 +325,23 @@ void sortByName(Record students[], int numRecords){
     This function sorts one section of the array by splitting it in two and recursively calling
     itself to sort the smaller sections, until the full array is sorted
 *****************************************************************************************************/
-void sortSubArray(int* inArray, size_t left, size_t right, SortMode mode){
+void sortSubArray(Record *inArray, int left, int right, SortMode mode){
     int leftSwap = left;
     int rightSwap = right;
     // Calculate the middle student record in the array
-    Record *middle = inArray[ (left + right) / 2 ];
+    // Record *middle = &(inArray[ (left + right) / 2 ]);
+    Record pivot = inArray[(left + right) / 2];
 
     do {
-        while ( compare(inArray[leftSwap], middle, mode) < 0/*(inArray[leftSwap] < middle)*/ && (leftSwap < right) ){
+        while ( compare(&(inArray[leftSwap]), &pivot, mode) < 0/*(inArray[leftSwap] < middle)*/ && (leftSwap < right) ){
             leftSwap++;
         }
-        while ( compare(inArray[rightSwap], middle, mode) > 0/*(inArray[rightSwap] > middle)*/ && (rightSwap > left) ){
+        while ( compare(&(inArray[rightSwap]), &pivot, mode) > 0/*(inArray[rightSwap] > middle)*/ && (rightSwap > left) ){
             rightSwap--;
         }
 
         if (leftSwap <= rightSwap){
             swap(inArray, leftSwap, rightSwap);
-
             leftSwap++;
             rightSwap--;
         }
@@ -373,10 +385,30 @@ int compare(Record *student1, Record *student2, SortMode mode){
 /*****************************************************************************************************
     This function swaps two student records in an array
 *****************************************************************************************************/
-void swap(Record inArray[], int firstIndex, int secondIndex){
+void swap(Record *inArray, int firstIndex, int secondIndex){
     Record temp = inArray[firstIndex];
     inArray[firstIndex] = inArray[secondIndex];
     inArray[secondIndex] = temp;
+}
+
+/*****************************************************************************************************
+    This function prints out the data stored in the student array depending on how any from the list
+    need to be printed
+*****************************************************************************************************/
+void printRecords(Record students[], int numRecords){
+    // Print the top banner
+    printf("-------------------------------------------------------------------------------------\n");
+    printf("S.No.\tID #\tName\t\t\t\tAccount #\tAvg.Gr\n");
+    printf("-------------------------------------------------------------------------------------\n");
+
+    // Print each record
+    for(int index = 0; index < numRecords; index++){
+        printf("Rec#%2d", index+1);
+        printf("\t%d", students[index].ID);
+        printf("\n%-32.30s", students[index].name);
+        printf("%-.7s", students[index].account);
+        printf("\t\t%5.2f\n", students[index].avg);
+    }
 }
 
 /*****************************************************************************************************
@@ -384,4 +416,19 @@ void swap(Record inArray[], int firstIndex, int secondIndex){
 *****************************************************************************************************/
 void writeBinaryFile(Record students[], int numRecords, FILE *filePtrBin){
 
+}
+
+/*****************************************************************************************************
+    This function opens the requested file. If the file cannot be opened, exit the program
+*****************************************************************************************************/
+FILE* openFile(char *fileName, char *mode){
+    FILE *filePtr;
+
+    // Exit the program if the file cannot be opened
+    if( (filePtr = fopen(fileName, mode)) == NULL ){
+        printf("Unable to open file\"%s\"\n", fileName);
+        exit(1);
+    }
+
+    return filePtr;
 }
