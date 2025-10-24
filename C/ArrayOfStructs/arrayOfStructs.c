@@ -86,13 +86,13 @@ void swap(Record inArray[], int firstIndex, int secondIndex);
 void welcome();
 int menu();
 void processMenu(Record students[], int *numRecords, int *numGrades);
-// Other
 void printRecords(Record students[], int numRecords);
-FILE* openFile(char *fileName, char *mode);
 // For reading/writing the binary file
 void readBinaryFile(FILE *filePtrBin, Record students[], int *numRecords, int *numGrades);
 void writeBinaryFile(FILE *filePtrBin, Record students[], int numRecords);
 long int getRecordCount(FILE *filePtrBin, Record students[]);
+// Other
+FILE* openFile(char *fileName, char *mode);
 
 
 /*****************************************************************************************************
@@ -407,26 +407,6 @@ void swap(Record *inArray, int firstIndex, int secondIndex){
 }
 
 /*****************************************************************************************************
-    This function prints out the data stored in the student array depending on how any from the list
-    need to be printed
-*****************************************************************************************************/
-void printRecords(Record students[], int numRecords){
-    // Print the top banner
-    printf("-------------------------------------------------------------------------------------\n");
-    printf("S.No.\tID #\tName\t\t\t\tAccount #\tAvg.Gr\n");
-    printf("-------------------------------------------------------------------------------------\n");
-
-    // Print each record
-    for(int index = 0; index < numRecords; index++){
-        printf("Rec #%2d:", index+1);
-        printf("\t%d", students[index].ID);
-        printf("\n%-27.25s", students[index].name);
-        printf("%-.7s", students[index].account);
-        printf("\t\t%5.2f\n", students[index].avg);
-    }
-}
-
-/*****************************************************************************************************
     This function displays a Welcome screen to the user
 *****************************************************************************************************/
 void welcome(){
@@ -547,6 +527,26 @@ void processMenu(Record students[], int *numRecords, int *numGrades){
         getchar();
         getchar();
         choice = menu();
+    }
+}
+
+/*****************************************************************************************************
+    This function prints out the data stored in the student array depending on how any from the list
+    need to be printed
+*****************************************************************************************************/
+void printRecords(Record students[], int numRecords){
+    // Print the top banner
+    printf("-------------------------------------------------------------------------------------\n");
+    printf("S.No.\tID #\tName\t\t\t\tAccount #\tAvg.Gr\n");
+    printf("-------------------------------------------------------------------------------------\n");
+
+    // Print each record
+    for(int index = 0; index < numRecords; index++){
+        printf("Rec #%2d:", index+1);
+        printf("\t%d", students[index].ID);
+        printf("\n%-27.25s", students[index].name);
+        printf("%-.7s", students[index].account);
+        printf("\t\t%5.2f\n", students[index].avg);
     }
 }
 
