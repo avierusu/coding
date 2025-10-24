@@ -14,7 +14,7 @@
                     If "stulist.bin" does exist:
                     All this binary information is read into an array of structs and a menu is printed
                     to prompt the user to achieve various tasks:
-                        Process Add/Drop File
+                        Process Add/Drop using a File
                         Process Individual Add/Drop
                         Sort by Student Name (Alphabetic order)
                         Sort by Student Average (Descending order)
@@ -42,8 +42,8 @@
 #define LAST_NAME_LENGTH 15
 #define FULL_NAME_LENGTH 40
 #define ACCT_LENGTH 7
-#define NUM_GRADES 10
-// There are actually 12 grades, but to search for a -1, count is increased by 1
+#define NUM_GRADES 11
+// There are actually 10 grades, but to search for a -1 in the binary file, count is increased by 1
 #define LINE_LENGTH 200
 #define MAX_RECORDS 100
 #define TRUE 1
@@ -82,10 +82,22 @@ void sortByName(Record students[], int numRecords);
 void sortSubArray(Record *inArray, int left, int right, SortMode mode);
 int compare(Record *student1, Record *student2, SortMode mode);
 void swap(Record inArray[], int firstIndex, int secondIndex);
+// User Interface
+void welcome();
+int menu();
+void processMenu(Record students[], int *numRecords, int *numGrades);
 // Other
 void printRecords(Record students[], int numRecords);
 FILE* openFile(char *fileName, char *mode);
+// For reading/writing the binary file
+void readBinaryFile(FILE *filePtrBin, Record students[], int *numRecords, int *numGrades);
+void writeBinaryFile(FILE *filePtrBin, Record students[], int numRecords);
+long int getRecordCount(FILE *filePtrBin, Record students[]);
 
+
+/*****************************************************************************************************
+                                            MAIN FUNCTION
+*****************************************************************************************************/
 int main(){
     // Define an array of student records, as well as integers to store the number of records
     // and the number of grades per record
@@ -95,7 +107,8 @@ int main(){
     FILE *filePtrBin;
 
     readData(TEXT_FILE, BIN_FILE, students, &recordCount, &gradeCount);
-    printRecords(students, recordCount);
+    processMenu(students, &recordCount, &gradeCount);
+    // printRecords(students, recordCount);
 
     return 0;
 }
@@ -125,7 +138,7 @@ void readData(char *inFile, char *outFile, Record students[], int *numRecords, i
         populateStruct(students, numRecords, numGrades, line);
 
         // Write the data in the struct to the "stuList.bin file
-        writeBinaryFile(students, numRecords, filePtrBin);
+        writeBinaryFile(filePtrBin, students, *numRecords);
 
         (*numRecords)++;
     }
@@ -208,6 +221,8 @@ void populateStruct(Record students[], int *numRecords, int *numGrades, char *li
                 // Increment grade count by 1
                 (*numGrades)++;
             }
+            // Store -1 at the end of the array of grades
+            students[*numRecords].grades[*numGrades] = -1;
 
 
             // Create a full name from first, middle, and last
@@ -403,19 +418,194 @@ void printRecords(Record students[], int numRecords){
 
     // Print each record
     for(int index = 0; index < numRecords; index++){
-        printf("Rec#%2d", index+1);
+        printf("Rec #%2d:", index+1);
         printf("\t%d", students[index].ID);
-        printf("\n%-32.30s", students[index].name);
+        printf("\n%-27.25s", students[index].name);
         printf("%-.7s", students[index].account);
         printf("\t\t%5.2f\n", students[index].avg);
     }
 }
 
 /*****************************************************************************************************
-    
+    This function displays a Welcome screen to the user
 *****************************************************************************************************/
-void writeBinaryFile(Record students[], int numRecords, FILE *filePtrBin){
+void welcome(){
+    // Clear the console
+    system("cls");
+    // Display a welcome banner
+    printf("\n\n");
+    printf("\t=====================================================\n");
+    printf("\tR E G I S T R A T I O N   P R O C E S S I N G\n");
+    printf("\t=====================================================\n");
+    printf("\tWelcome to the Registration Processing Program. This\n");
+    printf("\tprogram handles students who register for our course.\n");
+    printf("\tPlease respond to the following menu choice:\n\n");
+}
 
+/*****************************************************************************************************
+    This function displays a menu to the user
+*****************************************************************************************************/
+int menu(){
+    // Store the user's choice
+    int choice = 0;
+
+    // Display the menu options
+    printf("\n\n");
+    printf("\t*************************************************************************************\n");
+    printf("\t                                    M E N U\n");
+    printf("\t                                   ---------\n");
+    printf("\t1. Process Add/Drop using a File\n");
+    printf("\t2. Process Individual Add/Drop using Keyboard\n");
+    printf("\t3. Sort by Student Name (Alphabetic Order)\n");
+    printf("\t4. Sort by Student Average (Descending Order)\n");
+    printf("\t5. Sort by Student ID (Ascending Order)\n");
+    printf("\t6. Update Grades\n");
+    printf("\t7. Print List\n");
+    printf("\t9. Exit\n");
+    printf("\t*************************************************************************************\n\n");
+    printf("Enter your choice here: ");
+    scanf("%d", &choice);
+    return choice;
+}
+
+/*****************************************************************************************************
+    This function displays the menu to the user and processes their choice. If the user enters
+    an invalid menu choice, reprompts the user
+*****************************************************************************************************/
+void processMenu(Record students[], int *numRecords, int *numGrades){
+    int choice, displayCount = 0;
+    // Display the welcome banner
+    welcome();
+    // Display the menu and accept the user's choice
+    choice = menu();
+
+    // Keep displaying the menu until the user chooses to exit
+    while (choice != 9){
+        // Use a switch to perform different actions depending on the user's choice
+        switch (choice){
+            case 1:
+                // TODO: Process Add/Drop using a File
+                break;
+            case 2:
+                // TODO: Process Individual Add/Drop using Keyboard
+                break;
+            case 3:
+                // Sort by Student Name (Alphabetic Order)
+                sortByName(students, *numRecords);
+
+                // Display the first 20 records after sorting
+                printf("\nAfter sorting by Student Name, the Top 20 records from the list are:\n");
+                printRecords(students, 20);
+                break;
+            case 4:
+                // Sort by Student Average (Descending Order)
+                sortByGrades(students, *numRecords);
+
+                // Display the first 20 records after sorting
+                printf("\nAfter sorting by Student Average Grade, the Top 20 records from the list are:\n");
+                printRecords(students, 20);
+                break;
+            case 5:
+                // Sort by Student ID (Ascending Order)
+                sortById(students, *numRecords);
+
+                // Display the first 20 records after sorting
+                printf("\nAfter sorting by Student ID, the Top 20 records from the list are:\n");
+                printRecords(students, 20);
+                break;
+            case 6:
+                // TODO: Update Grades
+                break;
+            case 7:
+                // Print List
+                // Prompt the user to enter the amount of records to be displayed and store it
+                printf("\n\tA total of %d records are available.", *numRecords);
+                printf("\n\tEnter the number of student records you want to see: ");
+                scanf("%d", &displayCount);
+                
+                // If the user entered an invalid number of records (i.e. < 1 or more than the
+                // total number of records), reprompt
+                while (displayCount < 1 || displayCount > (*numRecords)){
+                    printf("\n\tThere are only %d records in the list", *numRecords);
+                    printf("\n\tEnter a number between 1 and %d: ", *numRecords);
+                    scanf("%d", &displayCount);
+                }
+
+                // Display the requested amount of records
+                printf("\n\n\tThe Top %d records from the list are:\n");
+                printRecords(students, displayCount);
+
+                break;
+            default:
+                // If the user enters an invalid value, display an error message and prompt again
+                printf("\tSorry, that is not a valid selection\n");
+                break;
+        }
+
+        // Display the menu again after the user presses Enter
+        printf("\n > Press ENTER to continue...");
+        getchar();
+        getchar();
+        choice = menu();
+    }
+}
+
+/*****************************************************************************************************
+    This function reads the binary file into an array of student record structs. It also calculates
+    the total number of records in the array and total number of grades for each student
+*****************************************************************************************************/
+void readBinaryFile(FILE *filePtrBin, Record students[], int *numRecords, int *numGrades){
+    // Get the total number of records in the file
+    *numRecords = getRecordCount(filePtrBin, students);
+
+    // Move the pointer to the beginning of the binary file
+    fseek(filePtrBin, 0L, 0);
+    // Read the binary file into an array of structs using fread()
+    for (int index = 0; index < (*numRecords); index++){
+        // Read one struct from the file
+        fread(&students[index], sizeof(Record), 1, filePtrBin);
+
+        // Move the file pointer to point to the end of the struct
+        fseek(filePtrBin, (long) ((index+1) * sizeof(Record)), 0);
+    }
+
+    // Determine the number of grades
+    for (int index = 0; index < NUM_GRADES; index++){
+        // Compare to see which grade is -1, which is stored after the final grade
+        if (students[0].grades[index] == -1){
+            *numGrades = index;
+            break;
+        }
+    }
+}
+
+/*****************************************************************************************************
+    This function writes the data stored in the student records array into a binary file
+*****************************************************************************************************/
+void writeBinaryFile(FILE *filePtrBin, Record students[], int numRecords){
+    // Write each student record into the binary file
+    fwrite(&students[numRecords], sizeof(Record), 1, filePtrBin);
+
+    // Move the file pointer to the end of file each time
+    fseek(filePtrBin, 0L, 2);
+}
+
+/*****************************************************************************************************
+    This function calculates the total number of records that are present in the input binary file.
+    Instead of calculating the number of lines in the file, this function calculates the total number
+    of bytes to store the whole file and divides that amount by the number of bytes required to store
+    one record
+*****************************************************************************************************/
+long int getRecordCount(FILE *filePtrBin, Record students[]){
+    long int numBytes, numRecords;
+    // Move the file pointer to the EOF
+    fseek(filePtrBin, (long)0, 2);
+    // Get the total number of bytes in the file
+    numBytes = ftell(filePtrBin);
+    // Calculate the total number of records
+    numRecords = numBytes / sizeof(Record);
+
+    return numRecords;
 }
 
 /*****************************************************************************************************
