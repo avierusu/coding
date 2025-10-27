@@ -42,10 +42,11 @@
 #define LAST_NAME_LENGTH 15
 #define FULL_NAME_LENGTH 40
 #define ACCT_LENGTH 7
-#define NUM_GRADES 11
 // There are actually 10 grades, but to search for a -1 in the binary file, count is increased by 1
+#define NUM_GRADES 11
 #define LINE_LENGTH 200
-#define MAX_RECORDS 100
+// There are 100 records, but we will store space for extra when we add/remove records later
+#define MAX_RECORDS 150
 #define TRUE 1
 #define FALSE 0
 
@@ -86,12 +87,17 @@ void swap(Record inArray[], int firstIndex, int secondIndex);
 void welcome();
 int menu();
 void processMenu(Record students[], int *numRecords, int *numGrades);
+void addDropUsingFile(Record students[], int *numRecords, int *numGrades);
+void readAddDropFile(Record students[], int *numRecords, int *numGrades, FILE *filePtrAddDrop);
+void addDropUsingKeyboard(Record students[], int *numRecords, int *numGrades);
 void printRecords(Record students[], int numRecords);
+void updateGrades(Record students[], int *numRecords, int *numGrades);
 // For reading/writing the binary file
 void readBinaryFile(FILE *filePtrBin, Record students[], int *numRecords, int *numGrades);
 void writeBinaryFile(FILE *filePtrBin, Record students[], int numRecords);
 long int getRecordCount(FILE *filePtrBin, Record students[]);
 // Other
+int binarySearch(Record students[], int searchKey, int low, int high, int size);
 FILE* openFile(char *fileName, char *mode);
 
 
@@ -106,9 +112,20 @@ int main(){
     int gradeCount;
     FILE *filePtrBin;
 
+    // // Call readData() only if "stuList.bin" file does not exist
+    // if ( (filePtrBin = fopen(BIN_FILE, "r")) == NULL ){
+    //     readData(TEXT_FILE, BIN_FILE, students, &recordCount, &gradeCount);
+    //     // Close the bin file, since it does not exist
+    //     fclose(filePtrBin);
+    // } else {
+    //     // If the bin file exists, read its data into the array of structs
+    //     readBinaryFile(filePtrBin, students, &recordCount, &gradeCount);
+
+    //     processMenu(students, &recordCount, &gradeCount);
+    // }
+
     readData(TEXT_FILE, BIN_FILE, students, &recordCount, &gradeCount);
     processMenu(students, &recordCount, &gradeCount);
-    // printRecords(students, recordCount);
 
     return 0;
 }
@@ -464,10 +481,12 @@ void processMenu(Record students[], int *numRecords, int *numGrades){
         // Use a switch to perform different actions depending on the user's choice
         switch (choice){
             case 1:
-                // TODO: Process Add/Drop using a File
+                // Process Add/Drop using a File
+                addDropUsingFile(students, numRecords, numGrades);
                 break;
             case 2:
-                // TODO: Process Individual Add/Drop using Keyboard
+                // Process Individual Add/Drop using Keyboard
+                addDropUsingKeyboard(students, numRecords, numGrades);
                 break;
             case 3:
                 // Sort by Student Name (Alphabetic Order)
@@ -494,7 +513,8 @@ void processMenu(Record students[], int *numRecords, int *numGrades){
                 printRecords(students, 20);
                 break;
             case 6:
-                // TODO: Update Grades
+                // Update Grades
+                updateGrades(students, numRecords, numGrades);
                 break;
             case 7:
                 // Print List
@@ -531,6 +551,251 @@ void processMenu(Record students[], int *numRecords, int *numGrades){
 }
 
 /*****************************************************************************************************
+    This function uses one of three files to process either an Add or a Drop of a student record
+    depending on the character in the first column of the input file ('A' for Add, 'D' for Drop) 
+*****************************************************************************************************/
+void addDropUsingFile(Record students[], int *numRecords, int *numGrades){
+    int choice;
+    FILE *filePtrAddDrop;
+
+    // Display the options to the user
+    printf("\n\tThe following files can be used to Add/Drop:\n\n");
+    printf("\t\t1. addDrop01.dat\n");
+    printf("\t\t1. addDrop02.dat\n");
+    printf("\t\t1. addDrop03.dat\n");
+    printf("\n\tSelect a number to indicate a file of your choice: ");
+
+    // Accept the user's input
+    scanf("%d ", &choice);
+    // If the user did not enter a valid choice, display an error message and reprompt
+    while (choice < 1 || choice > 3){
+        printf("\n\tYou must select a number between 1 and 3\n\tEnter your choice: ");
+        scanf("%d ", &choice);
+    }
+
+    // Depending on the user's choice, open and process the requested file
+    switch(choice){
+        case 1:
+            // Open and process the addDrop01.dat file
+            filePtrAddDrop = openFile("addDrop01.dat", "r");
+            readAddDropFile(students, numRecords, numGrades, filePtrAddDrop);
+            break;
+        case 2:
+            // Open and process the addDrop02.dat file
+            filePtrAddDrop = openFile("addDrop02.dat", "r");
+            readAddDropFile(students, numRecords, numGrades, filePtrAddDrop);
+            break;
+        case 3:
+            // Open and process the addDrop03.dat file
+            filePtrAddDrop = openFile("addDrop03.dat", "r");
+            readAddDropFile(students, numRecords, numGrades, filePtrAddDrop);
+            break;
+    }
+
+    // Close the file
+    fclose(filePtrAddDrop);
+}
+
+/*****************************************************************************************************
+    This function opens the "stuList.bin" file. It reads the given ".dat" file and determines which
+    record to add/drop, depending on the first character ('A' for Add, 'D' for Drop).
+
+    If it's 'A', it checks to see if the ID read already exists. If so, it reports that it cannot add
+    that record. If not, it creates space for the new ID and takes all information needed for the
+    record, including calculating an account ID and grade average.
+
+    If it's 'D', it checks to see if the ID read already exists. If so, it will ask the user if they
+    are sure that they want to delete the record from the array.
+
+    Finally, it will display a list of IDs added, IDs dropped, and IDs not found
+*****************************************************************************************************/
+void readAddDropFile(Record students[], int *numRecords, int *numGrades, FILE *filePtrAddDrop){
+    FILE *filePtrBin;
+    char *outFile = "stuList.bin";
+    char buffer[LINE_LENGTH];
+    char *line;
+    // Count the total records in the .dat file
+    int lineCount = 0;
+    // ID of the student to add/drop
+    int ID;
+    // The size of these array is dynamically allocated depending on the size of the file
+    int *IDsAddedArray, *IDsDroppedArray, *IDsNotFoundArray, *IDsExistsArray;
+    // Count the number of records added, dropped, already existing, or not found
+    int addCount = 0, dropCount = 0, notFoundCount = 0, existCount = 0;
+    int notFoundFlag = FALSE;
+    int existFlag = FALSE;
+    int result;
+
+    // Open "stuList.bin" in write mode
+    filePtrBin = openFile(outFile, "w");
+
+    // Count the total number of lines in the file. Since each line does not represent a record
+    // and is therefore uneven, we will use fgets()
+    while ( fgets(buffer, LINE_LENGTH, filePtrAddDrop) != NULL ){
+        lineCount++;
+    }
+
+    // After the while loop above, the pointer filePtrAddDrop is pointing to the last line of the
+    // file, so we must bring the pointer back to the beginning of the file.
+    fseek(filePtrAddDrop, 0L, 0);
+
+    // Allocate dynamic memory for the 4 arrays previously defined. Assume every line must be added
+    // to the array to assign enough memory
+    if ( (IDsAddedArray = (int *)calloc(lineCount, sizeof(int))) == NULL ){
+        printf("\nUnable to allocate space for \"IDsAddedArray\"\n");
+        exit(20);
+    }
+    if ( (IDsDroppedArray = (int *)calloc(lineCount, sizeof(int))) == NULL ){
+        printf("\nUnable to allocate space for \"IDsDroppedArray\"\n");
+        exit(20);
+    }
+    if ( (IDsNotFoundArray = (int *)calloc(lineCount, sizeof(int))) == NULL ){
+        printf("\nUnable to allocate space for \"IDsNotFoundArray\"\n");
+        exit(20);
+    }
+    if ( (IDsExistsArray = (int *)calloc(lineCount, sizeof(int))) == NULL ){
+        printf("\nUnable to allocate space for \"IDsExistsArray\"\n");
+        exit(20);
+    }
+
+    // Assign null to buffer
+    for (int index = 0; index < LINE_LENGTH; index++){
+        buffer[index] == '\0';
+    }
+
+    // Process each line
+    while ( fgets(buffer, LINE_LENGTH, filePtrAddDrop) != NULL ){
+        // *line contains either 'A' or 'D'
+        line = buffer;
+        // Move the pointer next to 'A' or 'D'
+        line += 1;
+        line = skipSpace(line);
+        sscanf(line, "%5d", &ID);
+
+        // Search for the ID in the array
+        result = binarySearch(students, ID, 0, ((*numRecords)-1), (*numRecords));
+
+        // Make line point to the first character
+        line = buffer;
+
+        // Process Add or Drop
+        if ((*line) == 'A'){
+            // Add the record in the last element of the array
+            // First, check if the record is not already in the array
+            if (result == -1){
+                // Move the pointer to the next 'A'
+                line = line + 1;
+                populateStruct(students, numRecords, numGrades, line);
+                // Increase the number of records by one
+                (*numRecords)++;
+
+                // Store the IDs that are successfully added
+                IDsAddedArray[addCount] = ID;
+                addCount++;
+            } else {
+                // If the ID already exists:
+                IDsExistsArray[existCount] == ID;
+                existCount++;
+                existFlag = TRUE;
+            }
+        } else if ((*line) == 'D'){
+            // Drop record from the array
+            // First, check if the record is already in the array
+            if (result != -1){
+                // Move all elements after the found index up by one element
+                // FIXME: might have to change condition to index < ((*numRecords)-1), because
+                // the students[index+1] check might go out of bounds. we will see !!
+                for (int index = result; index < (*numRecords); index++){
+                    students[index] = students[index+1];
+                }
+
+                // Store the IDs that are successfully dropped
+                IDsDroppedArray[dropCount] = ID;
+                dropCount++;
+
+                // Cut down the size of the array by 1, since we dropped 1 record
+                (*numRecords)--;
+            } else {
+                // If the ID does not exist:
+                IDsNotFoundArray[notFoundCount] = ID;
+                notFoundCount++;
+                notFoundFlag = TRUE;
+            }
+        } else {
+            // If neither 'A' nor 'D'
+            printf("\nUnable to Add/Drop record from file\nDid not see either an 'A' or a 'D' in the file\n");
+        }
+    }
+
+    // Display how many IDs were added/dropped
+    printf("\n\tTotal IDs ADDED: \t%d", addCount);
+    printf("\n\tTotal IDs DROPPED: \t%d\n", dropCount);
+
+    // If any IDs were added/dropped, display a table showing them
+    if (addCount > 0 || dropCount > 0){
+        printf("\n\t\t--------------------------------");
+        printf("\n\t\tIDs Added\t\tIDs Dropped");
+        printf("\n\t\t--------------------------------");
+
+        // Display each ID that was added/dropped
+        // Since the IDs added and IDs dropped will be displayed side by side, we must print them at the same time
+        // and pass through each array at the same time
+        for (int addIndex = 0, dropIndex = 0; addIndex < addCount || dropIndex < dropCount; addIndex++, dropIndex++){
+            if (IDsAddedArray[addIndex] == 0){
+                // If there are no more added IDs, only print the dropped IDs
+                printf("\t\t*****\t\t\t%d\n", IDsDroppedArray[dropIndex]);
+            } else if (IDsDroppedArray[dropIndex] == 0){
+                // If there are no more dropped IDs, only print the added IDs
+                printf("\t\t%d\t\t\t*****\n", IDsAddedArray[addIndex]);
+            } else {
+                // If there are still more added AND dropped IDs, print both side by side
+                printf("\t\t%d\t\t\t%d\n", IDsAddedArray[addIndex], IDsDroppedArray[dropIndex]);
+            }
+            // Print a divider
+            printf("\t\t--------------------------------\n\n");
+        }
+    }
+
+    // Display any errors in reading Add/Drop from the file
+    // First, display any records that already existed and could not be added
+    if (existFlag == TRUE){
+        printf("\n\tThe following IDs could not be added:\n");
+        // Loop through the array of existing IDs and display them
+        for (int existIndex = 0; existIndex <  existCount; existIndex++){
+            printf("\t\t%d\n", IDsExistsArray[existIndex]);
+        }
+        printf("\t\tReason: They already exist.\n");
+    }
+    // Next, display any records that could not be dropped because they did not exist
+    if (notFoundFlag == TRUE){
+        printf("\n\tThe following IDs could not be dropped:\n");
+        // Loop through the array of non-existent IDs and display them
+        for (int notFoundIndex = 0; notFoundIndex <  notFoundCount; notFoundIndex++){
+            printf("\t\t%d\n", IDsNotFoundArray[notFoundIndex]);
+        }
+        printf("\t\tReason: They do not exist.\n");
+    }
+
+    // Sort the complete array by ID
+    sortById(students, (*numRecords));
+
+    // Write each record to the bin file
+    for (int index = 0; index < (*numRecords); index++){
+        writeBinaryFile(filePtrBin, students, index);
+    }
+
+    free((void*)IDsNotFoundArray);
+    free((void*)IDsExistsArray);
+}
+
+/*****************************************************************************************************
+    TODO: write function
+*****************************************************************************************************/
+void addDropUsingKeyboard(Record students[], int *numRecords, int *numGrades){
+
+}
+
+/*****************************************************************************************************
     This function prints out the data stored in the student array depending on how any from the list
     need to be printed
 *****************************************************************************************************/
@@ -548,6 +813,13 @@ void printRecords(Record students[], int numRecords){
         printf("%-.7s", students[index].account);
         printf("\t\t%5.2f\n", students[index].avg);
     }
+}
+
+/*****************************************************************************************************
+    TODO: write function
+*****************************************************************************************************/
+void updateGrades(Record students[], int *numRecords, int *numGrades){
+
 }
 
 /*****************************************************************************************************
@@ -606,6 +878,35 @@ long int getRecordCount(FILE *filePtrBin, Record students[]){
     numRecords = numBytes / sizeof(Record);
 
     return numRecords;
+}
+
+/*****************************************************************************************************
+    This function uses Binary Search to search the entire student array for the desired student ID
+*****************************************************************************************************/
+int binarySearch(Record students[], int searchKey, int low, int high, int size){
+    // Since the size ranges from 0 to size, we cannot assign 0 to "middle"
+    int index = -1, middle;
+
+    // Perform a binary search
+    while (low <= high){
+        middle = (low + high) / 2;
+
+        // Check for a match
+        if (searchKey == students[middle].ID){
+            index = middle;
+            break;
+        } else {
+            if (searchKey < students[middle].ID){
+                // Search the lower half of the array
+                high = middle - 1;
+            } else {
+                // Search the higher half of the array
+                low = middle + 1;
+            }
+        }
+    }
+
+    return index;
 }
 
 /*****************************************************************************************************
