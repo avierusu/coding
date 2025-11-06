@@ -36,7 +36,7 @@
 
 #define TEXT_FILE "stuList.dat"
 #define BIN_FILE "stuList.bin"
-#define ID_SIZE 5
+#define ID_LENGTH 5
 #define FIRST_NAME_LENGTH 10
 #define MIDDLE_NAME_LENGTH 10
 #define LAST_NAME_LENGTH 15
@@ -90,8 +90,11 @@ void processMenu(Record students[], int *numRecords, int *numGrades);
 void addDropUsingFile(Record students[], int *numRecords, int *numGrades);
 void readAddDropFile(Record students[], int *numRecords, int *numGrades, FILE *filePtrAddDrop);
 void addDropUsingKeyboard(Record students[], int *numRecords, int *numGrades);
+void addRecord(Record students[], int *numRecords, int *numGrades);
+void dropRecord(Record students[], int *numRecords);
 void printRecords(Record students[], int numRecords);
 void updateGrades(Record students[], int *numRecords, int *numGrades);
+void readGrades(Record students[], int *numRecords, int *numGrades, FILE *filePtrGrades);
 // For reading/writing the binary file
 void readBinaryFile(FILE *filePtrBin, Record students[], int *numRecords, int *numGrades);
 void writeBinaryFile(FILE *filePtrBin, Record students[], int numRecords);
@@ -181,7 +184,7 @@ void populateStruct(Record students[], int *numRecords, int *numGrades, char *li
          firstName[FIRST_NAME_LENGTH],
          middleName[MIDDLE_NAME_LENGTH],
          fullName[FULL_NAME_LENGTH],
-         studentId[ID_SIZE],
+         studentId[ID_LENGTH],
          accountId[ACCT_LENGTH],
          temp[30];
     
@@ -789,10 +792,206 @@ void readAddDropFile(Record students[], int *numRecords, int *numGrades, FILE *f
 }
 
 /*****************************************************************************************************
-    TODO: write function
+    This function adds or drops a student record when the user enters an 'A' or a 'D' in the command
+    line.
 *****************************************************************************************************/
 void addDropUsingKeyboard(Record students[], int *numRecords, int *numGrades){
+    // Create a variable to store the user's choice of whether to add a student ('A'), drop a
+    // student ('D'), or quit out of the prompts ('Q')
+    char choice;
 
+    // Repeatedly prompt the user for input until they decide to quit
+    do {
+        printf("\n\tA - Add a student record");
+        printf("\n\tD - Drop a student record");
+        printf("\n\tQ - Quit");
+        printf("\n\t\tEnter your choice: ");
+        // Store the user's input
+        scanf("%s ", &choice);
+
+        // Process the user's input
+        if (toupper(choice == 'Q')){
+            // If Quit, exit the loop
+            break;
+        }
+        // If the user did not quit, continue
+        switch (toupper(choice)){
+            case 'A':
+                // Add a student record
+                addRecord(students, numRecords, numGrades);
+                break;
+            case 'D':
+                // Drop a student record
+                dropRecord(students, numRecords);
+                break;
+            default:
+                // Any invalid option
+                printf("\n\t\tInvalid choice.\n");
+        }
+    } while (toupper(choice) != 'Q');
+}
+
+/*****************************************************************************************************
+    This function adds a student record to the array of structs
+*****************************************************************************************************/
+void addRecord(Record students[], int *numRecords, int *numGrades){
+    int ID, IDSize, result = 0;
+    Record temp;
+    char lastName[LAST_NAME_LENGTH],
+         firstName[FIRST_NAME_LENGTH],
+         middleName[MIDDLE_NAME_LENGTH],
+         fullName[FULL_NAME_LENGTH],
+         studentId[ID_LENGTH+1],
+         accountId[ACCT_LENGTH+1];
+    
+    printf("\n");
+    // Flush out the buffer
+    fflush(stdin);
+    printf("\t\tEnter the ID to be added: ");
+    scanf("%d%n", &ID, &IDSize);
+    
+    // If the ID is not 5 digits long, continue to reprompt
+    // Also, if the ID is already in the list, continue to reprompt
+    while (IDSize != ID_LENGTH || result != -1){
+        // First, check if the ID is 5 digits long
+        if (IDSize != ID_LENGTH){
+            // If not, reprompt and start the loop from the beginning
+            printf("\n\t\tThe ID should be %d digits long\n", ID_LENGTH);
+            fflush(stdin);
+            printf("\t\tEnter the ID to be added: ");
+            scanf("%d%n", &ID, &IDSize);
+            continue;
+        }
+        // If we reach here, the ID is the correct length
+        
+        // Search to see if the ID already exists
+        result = binarySearch(students, ID, 0, ((*numRecords)-1), (*numRecords));
+
+        // Next, check if the ID entered already exists
+        if (result != -1){
+            // If so, reprompt
+            printf("\n\t\tThe ID you entered already exists.\n");
+            fflush(stdin);
+            printf("\t\tEnter the ID to be added: ");
+            scanf("%d%n", &ID, &IDSize);
+        }
+    }
+    // If we reach here, the ID is the correct length and does not already exist in the array
+
+    // Now, we can add the ID to the array
+    // Increment the size of the array by 1
+    (*numRecords)++;
+
+    // Store data of the new record in the last array element, i.e. (size-1)
+    // Store ID
+    students[(*numRecords)-1].ID = ID;
+
+    // Get first, middle, and last names
+    printf("\n");
+    fflush(stdin);
+    printf("\tEnter First name: ");
+    gets(firstName);
+
+    fflush(stdin);
+    printf("\tEnter Middle name: ");
+    gets(middleName);
+
+    fflush(stdin);
+    printf("\tEnter Last name: ");
+    gets(lastName);
+
+    // Set all characters in fullName to null
+    for (int index = 0; index < FULL_NAME_LENGTH; index++){
+        fullName[index] = '\0';
+    }
+
+    // Create the student's full name
+    createName(fullName, firstName, middleName, lastName);
+    strcpy(students[(*numRecords)-1].name, fullName);
+
+    // Get grades
+    printf("\n\tEnter a total of %d grades:\n", (*numGrades));
+
+    for (int index = 0; index < (*numGrades); index++){
+        printf("\t\tGrade %2d of %2d: ", (index+1), (*numGrades));
+        scanf("%d", (students[(*numRecords)-1].grades[index]));
+    }
+
+    // Calculate the average of all grades
+    students[(*numGrades)-1].avg = gradeAvg(students[(*numGrades)-1], (*numGrades));
+
+    // Create the student's account ID
+    snprintf(studentId, ACCT_LENGTH+1, "%d", ID);
+    createAccount(accountId, firstName, middleName, lastName, studentId);
+    strcpy(students[(*numRecords)-1].account, accountId);
+
+    // Re-sort the array
+    sortById(students, (*numRecords));
+}
+
+/*****************************************************************************************************
+    This function drops a student record from the array of structs
+*****************************************************************************************************/
+void dropRecord(Record students[], int *numRecords){
+    int ID, IDSize = 0, reply, result;
+    char studentID[ID_LENGTH+1];
+
+    printf("\n\tEnter ID to be dropped: ");
+    fflush(stdin);
+    scanf("%d%n", &ID, &IDSize);
+
+    // If the ID is not 5 digits long, continue to reprompt
+    // Also, if the ID is not already in the list, continue to reprompt
+    while (IDSize != ID_LENGTH || result == -1){
+        // First, check if the ID is 5 digits long
+        if (IDSize != ID_LENGTH){
+            // If not, reprompt and start the loop from the beginning
+            printf("\n\t\tThe ID should be %d digits long\n", ID_LENGTH);
+            fflush(stdin);
+            printf("\t\tEnter the ID to be added: ");
+            scanf("%d%n", &ID, &IDSize);
+            continue;
+        }
+        // If we reach here, the ID is the correct length
+        
+        // Search to see if the ID already exists
+        result = binarySearch(students, ID, 0, ((*numRecords)-1), (*numRecords));
+
+        // Next, check if the ID entered does not already exist
+        if (result == -1){
+            // If so, reprompt
+            printf("\n\t\tThe ID you entered doesn't already exist.\n");
+            fflush(stdin);
+            printf("\t\tEnter the ID to be added: ");
+            scanf("%d%n", &ID, &IDSize);
+        }
+    }
+    // If we reach here, the ID is the correct length and already exists in the array
+
+    // Now, we can drop the student from the array
+    printf("\n\tThe record that you requested to be dropped is:\n\n");
+    printf("\t%d", students[result].ID);
+    printf("\n%-27.25s", students[result].name);
+    printf("%-.7s", students[result].account);
+    printf("\t\t%5.2f\n", students[result].avg);
+
+    printf("\n\tYou have selected to drop the record with ID: %d", ID);
+    printf("\n\tAre you sure? (Y/N): ");
+    fflush(stdin);
+    if ( (reply = toupper(getchar())) == 'Y' ){
+        // If the user chooses to drop the grade, then drop it from the array
+        for (int index = result; index < (*numRecords); index++){
+            // Move all elements after the chosen record's index up by one
+            students[index] = students[index+1];
+        }
+
+        // Reduce the size of the array by 1
+        (*numRecords)--;
+        printf("\n\tSuccessfully dropped the record with ID \"%d\"\n", ID);
+    } else {
+        // If the user replies with somthing other than 'Y':
+        printf("\n\tYou chose not to drop the record with ID #%d\n", ID);
+    }
 }
 
 /*****************************************************************************************************
@@ -816,10 +1015,222 @@ void printRecords(Record students[], int numRecords){
 }
 
 /*****************************************************************************************************
-    TODO: write function
+    This function updates the student array after reading one of three listed text files. The first
+    line in the array indicates which test's grade needs to be updated. The grades are listed after
+    the student's ID. Make up exams and their grades are also listed.
 *****************************************************************************************************/
 void updateGrades(Record students[], int *numRecords, int *numGrades){
+    int choice;
+    FILE *filePtrGrades;
 
+    // Display a menu for the user to select a file
+    printf("\n\tThe following files can be used to update grades:\n\n");
+    printf("\t\t1. lab10grades.dat\n");
+    printf("\t\t2. lab11grades.dat\n");
+    printf("\t\t3. lab12grades.dat\n");
+    // Prompt for and store the user's input
+    printf("\n\tSelect a number to indicate a file of your choice: ");
+    scanf("%d", &choice);
+
+    // If the user did not input a valid option, continue to reprompt
+    while (choice < 1 || choice > 3){
+        printf("\n\tYou must select a number between 1 and 3");
+    }
+
+    // Process the user's choice
+    switch (choice){
+        case 1:
+            // Use lab10grades.dat
+            filePtrGrades = openFile("lab10grades.dat", "r");
+            break;
+        case 2:
+            // Use lab11grades.dat
+            filePtrGrades = openFile("lab10grades.dat", "r");
+            break;
+        case 3:
+            // Use lab12grades.dat
+            filePtrGrades = openFile("lab10grades.dat", "r");
+            break;
+            // Don't need a default because we validated input earlier
+    }
+
+    // Read grades from the file
+    readGrades(students, numRecords, numGrades, filePtrGrades);
+    // Close the file
+    fclose(filePtrGrades);
+}
+
+/*****************************************************************************************************
+    This function reads grades form the given text file to update the student array. The first line
+    in the text file indicates the test number that needs to be updated.
+*****************************************************************************************************/
+void readGrades(Record students[], int *numRecords, int *numGrades, FILE *filePtrGrades){
+    FILE *filePtrBin;
+    char outFile = "stuList.bin";
+    char buffer[LINE_LENGTH];
+    char *line;
+
+    int testNum = 0, tempTestNum = 0, ID, result, size, grades;
+    // Count the total number of records in the file
+    int lineCount = 0;
+    // The size of these arrays are dynamically allocated depending on the size of the file
+    int *IDsUpdatedArray, *IDsNotFoundArray;
+    // Count the total number of records added
+    int updateCount = 0;
+    // Count the total number of records not found
+    int notFoundCount = 0;
+    int notFoundFlag = FALSE;
+
+    // Open the binary file to write
+    filePtrBin = openFile(BIN_FILE, "w");
+
+    // Count the ttoal number of lins in the fiel. Since each line is of uneven length, we
+    // will use fgets() to read each line
+    while ( fgets(buffer, LINE_LENGTH, filePtrGrades) != NULL ){
+        lineCount++;
+    }
+
+    // After the end of the while loop, the pointer "filePtrGrades" is pointing to the last line
+    // of the file, so we must bring the pointer back to the beginning of the file
+    fseek(filePtrGrades, 0L, 0);
+
+    // Dynamically allocate memory for the two arrays
+    if ( (IDsUpdatedArray = (int *)calloc(lineCount, sizeof(int))) == NULL ){
+        printf("Unable to allocate space for \"IDsAddedArray\"");
+        exit(30);
+    }
+    if ( (IDsNotFoundArray = (int *)calloc(lineCount, sizeof(int))) == NULL ){
+        printf("Unable to allocate space for \"IDsNotFoundArray\"");
+        exit(31);
+    }
+
+    // Read the first line which tells which test number the grades are for
+    if ( fgets(buffer, LINE_LENGTH, filePtrGrades) != NULL ){
+        // Store the number in the first line
+        tempTestNum = atoi(buffer);
+
+        // Read the consecutive lines to store ID and grades
+        while ( fgets(buffer, LINE_LENGTH, filePtrGrades) != NULL ){
+            testNum = tempTestNum;
+            line = buffer;
+
+            // If the pointer is pointing at a digit, then read the ID
+            if (isdigit(*line)){
+                // Read ID
+                sscanf(line, "%d%n", &ID, &size);
+                line += size;
+
+                // Check to see if the ID already exists
+                result = binarySearch(students, ID, 0, (*numRecords)-1, (*numRecords));
+
+                // ID exists, so add the grades
+                if (result != -1){
+                    //Store the ID that will be updated in an array
+                    IDsUpdatedArray[updateCount] = ID;
+                    updateCount++;
+
+                    line = skipSpace(line);
+
+                    // If there is only one test grade to be updated:
+                    while ((*line) != '\0'){
+                        // Read the grade obtained
+                        sscanf(line, "%d%n", &grades, &size);
+
+                        // Assign the grade to testNum element in the array
+                        students[result].grades[testNum-1] = grades;
+                        line += size;
+
+                        while (isspace(*line)){
+                            line = skipSpace(line);
+                        }
+
+                        // If there is more than one test to be updated:
+                        while (isdigit(*line)){
+                            // Read the next test number to be updated
+                            sscanf(line, "%d%n", &testNum, &size);
+                            line += size;
+
+                            while (isspace(*line)){
+                                line = skipSpace(line);
+                            }
+
+                            // Read grade
+                            sscanf(line, "%d%n", &grades, &size);
+                            students[result].grades[testNum-1] = grades;
+                            line += size;
+
+                            while (isspace(*line)){
+                                line = skipSpace(line);
+                            }
+                        }   // End of "more than one test" loop
+                    }   // End of "only one test" loop
+                } else {    // End of "ID exist" if statement
+                    // If ID does not exist:
+                    // Store IDs that aren't found in the list
+                    IDsNotFoundArray[notFoundCount] = ID;
+                    notFoundCount++;
+                    notFoundFlag = TRUE;
+                }
+            } else {    // End of "Pointer pointing at digit" if statement
+                // Skip until the digit appears
+                line++;
+            }
+        }   // End of "Read lines in record" loop
+    }
+
+
+    // Print how many IDs are Updated and Not Found
+    printf("\n\tTotal IDs UPDATED: \t%d", updateCount);
+    printf("\n\tTotal IDs NOT FOUND: \t%d\n", notFoundCount);
+
+    // If there are any IDs with updated grades, display them
+    if (updateCount > 0){
+        // Print a header for the list
+        printf("\n\t............................................\n");
+        printf("\t\tUpdated grades for the following IDs\n");
+        printf("\t............................................\n");
+
+        // Print each ID with updated grades
+        for (int index = 0; index < updateCount; index++){
+            // Column output
+            if (index % 5 == 0){
+                printf("\n\t");
+            }
+            printf("\t%d", IDsUpdatedArray[index]);
+        }
+    }
+
+    // If there are any IDs that were not found, display them
+    if (notFoundCount == TRUE){
+        // There is at least one ID in the file that is not in the list
+        printf("\n\n\t\tGrades for the following IDs can not be updated because they do not exist:\n");
+        // Print each ID that was not found
+        for (int index = 0; index < notFoundCount; index++){
+            // Column output
+            if (index % 5 == 0){
+                printf("\n\t");
+            }
+            printf("\t%d", IDsNotFoundArray[index]);
+        }
+    }
+    printf("\n");
+
+    // Update the average fo grades for all students
+    for (int index = 0; index < (*numRecords); index++){
+        students[index].avg = gradeAvg(students[index], (*numGrades));
+    }
+
+    // Sort the complete array by ID
+    sortById(students, (*numRecords));
+
+    // Write each record to the binary file
+    for (int index = 0; index < (*numRecords); index++){
+        writeBinaryFile(students, index, filePtrBin);
+    }
+
+    free((void*)IDsUpdatedArray);
+    free((void*)IDsNotFoundArray);
+    fclose(filePtrBin);
 }
 
 /*****************************************************************************************************
