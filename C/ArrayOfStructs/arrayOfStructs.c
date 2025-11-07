@@ -17,8 +17,8 @@
                         Process Add/Drop using a File
                         Process Individual Add/Drop
                         Sort by Student Name (Alphabetic order)
-                        Sort by Student Average (Descending order)
-                        Sort by Student ID number (Descending order)
+                        Sort by Student Average (Ascending order)
+                        Sort by Student ID number (Ascending order)
                         Update Grades (Should automatically sort by ID number, then recalculate
                         averages)
                         Print List
@@ -457,7 +457,7 @@ int menu(){
     printf("\t1. Process Add/Drop using a File\n");
     printf("\t2. Process Individual Add/Drop using Keyboard\n");
     printf("\t3. Sort by Student Name (Alphabetic Order)\n");
-    printf("\t4. Sort by Student Average (Descending Order)\n");
+    printf("\t4. Sort by Student Average (Ascending Order)\n");
     printf("\t5. Sort by Student ID (Ascending Order)\n");
     printf("\t6. Update Grades\n");
     printf("\t7. Print List\n");
@@ -802,10 +802,10 @@ void addDropUsingKeyboard(Record students[], int *numRecords, int *numGrades){
 
     // Repeatedly prompt the user for input until they decide to quit
     do {
-        printf("\n\tA - Add a student record");
-        printf("\n\tD - Drop a student record");
-        printf("\n\tQ - Quit");
-        printf("\n\t\tEnter your choice: ");
+        printf("\n\t\tA - Add a student record");
+        printf("\n\t\tD - Drop a student record");
+        printf("\n\t\tQ - Quit");
+        printf("\n\tEnter your choice: ");
         // Store the user's input
         scanf("%s ", &choice);
 
@@ -1001,7 +1001,7 @@ void dropRecord(Record students[], int *numRecords){
 void printRecords(Record students[], int numRecords){
     // Print the top banner
     printf("-------------------------------------------------------------------------------------\n");
-    printf("S.No.\tID #\tName\t\t\t\tAccount #\tAvg.Gr\n");
+    printf("Record #\tID #\nName\t\t\t   Account #\t\tAvg.Gr\n");
     printf("-------------------------------------------------------------------------------------\n");
 
     // Print each record
@@ -1066,7 +1066,7 @@ void updateGrades(Record students[], int *numRecords, int *numGrades){
 *****************************************************************************************************/
 void readGrades(Record students[], int *numRecords, int *numGrades, FILE *filePtrGrades){
     FILE *filePtrBin;
-    char outFile = "stuList.bin";
+    char *outFile = "stuList.bin";
     char buffer[LINE_LENGTH];
     char *line;
 
@@ -1225,7 +1225,7 @@ void readGrades(Record students[], int *numRecords, int *numGrades, FILE *filePt
 
     // Write each record to the binary file
     for (int index = 0; index < (*numRecords); index++){
-        writeBinaryFile(students, index, filePtrBin);
+        writeBinaryFile(filePtrBin, students, index);
     }
 
     free((void*)IDsUpdatedArray);
