@@ -33,6 +33,7 @@
 #include <stdlib.h>     // For using malloc
 #include <ctype.h>      // For using isalnum()
 #include <string.h>     // For using strcat()
+#include <stdbool.h>
 
 #define STUD_IN_FILE "stuListShort.dat"
 #define OUT_BIN_FILE "stuList.bin"
@@ -95,8 +96,11 @@ int compare(Student *student1, Student *student2, SortMode mode);
 void swap(Student *inArray, int firstIndex, int secondIndex);
 // For adding or dropping student records
 void addDropByStudent(Student *students, int *numRecords, int *numGrades);
-void addRecord(Student *students, int *numRecords, int *numGrades);
-void dropRecord(Student *students, int *numRecords);
+void validateID(Student *students, int *numRecords, int *numGrades, RecordOperation operation);
+void requestData(Student *students, int *numRecords, int *numGrades, int ID);
+void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char firstName[],
+    char middleName[], char lastName[], int grades[]);
+void dropRecord(Student *students, int *numRecords, int ID, int result);
 // Other
 int binarySearch(Student students[], int searchKey, int low, int high, int size);
 FILE* openFile(char *fileName, char *mode);
@@ -405,11 +409,15 @@ void addDropByStudent(Student *students, int *numRecords, int *numGrades){
                 break;
             case 'A':
                 // Add a student record
-                addRecord(students, numRecords, numGrades);
+                // addRecord(students, numRecords, numGrades);
+                validateID(students, numRecords, numGrades, ADD);
+                // Re-sort the array
+                sortById(students, (*numRecords));
                 break;
             case 'D':
                 // Drop a student record
-                dropRecord(students, numRecords);
+                // dropRecord(students, numRecords);
+                validateID(students, numRecords, numGrades, DROP);
                 break;
             default:
                 // Any invalid option
@@ -419,111 +427,33 @@ void addDropByStudent(Student *students, int *numRecords, int *numGrades){
 }
 
 /*****************************************************************************************************
-    This function adds a student record to the array of structs
+    This function is ran before adding or dropping a student record. It's function is to accept an ID
+    from the user and run it through various checks to validate whether or not it is valid.
 *****************************************************************************************************/
-void addRecord(Student *students, int *numRecords, int *numGrades){
-    int ID, IDSize, result = 0;
-    Student temp;
-    char lastName[LAST_NAME_LENGTH],
-         firstName[FIRST_NAME_LENGTH],
-         middleName[MIDDLE_NAME_LENGTH],
-         studentId[ID_LENGTH+1],
-         accountId[ACCT_LENGTH+1];
-    
-    fflush(stdin);
-    printf("\n\t\tEnter the ID to be added: ");
-    scanf("%d%n", &ID, &IDSize);
-    
-    // If the ID is not 5 digits long, continue to reprompt
-    // Also, if the ID is already in the list, continue to reprompt
-    while (IDSize != ID_LENGTH || result != -1){
-        // First, check if the ID is 5 digits long
-        if (IDSize != ID_LENGTH){
-            // If not, reprompt and start the loop from the beginning
-            printf("\n\t\tThe ID should be %d digits long\n", ID_LENGTH);
-            fflush(stdin);
-            printf("\t\tEnter the ID to be added: ");
-            scanf("%d%n", &ID, &IDSize);
-            continue;
-        }
-        // If we reach here, the ID is the correct length
-        
-        // Search to see if the ID already exists
-        result = binarySearch(students, ID, 0, ((*numRecords)-1), (*numRecords));
+void validateID(Student *students, int *numRecords, int *numGrades, RecordOperation operation){
+    int ID, IDSize, result, allDigits = 0;
+    char buffer[32], message[32];
+    bool binaryCheck;
 
-        // Next, check if the ID entered already exists
-        if (result != -1){
-            // If so, reprompt
-            printf("\n\t\tThe ID you entered already exists.\n");
-            fflush(stdin);
-            printf("\t\tEnter the ID to be added: ");
-            scanf("%d%n", &ID, &IDSize);
-        }
-    }
-    // If we reach here, the ID is the correct length and does not already exist in the array
-
-    // Now, we can add the ID to the array
-    // Increment the size of the array by 1
-    (*numRecords)++;
-
-    // Store data of the new record in the last array element, i.e. (size-1)
-    // Store ID
-    students[(*numRecords)-1].ID = ID;
-
-    // Get and populate first, middle, and last names
-    fflush(stdin);
-    printf("\n");
-    printf("\tEnter First name: ");
-    scanf("%s", &firstName);
-    strcpy(students[(*numRecords)-1].firstName, firstName);
-
-    fflush(stdin);
-    printf("\tEnter Middle name: ");
-    scanf("%s", &middleName);
-    strcpy(students[(*numRecords)-1].middleName, middleName);
-
-    fflush(stdin);
-    printf("\tEnter Last name: ");
-    scanf("%s", &lastName);
-    strcpy(students[(*numRecords)-1].lastName, lastName);
-
-    // Get grades
-    printf("\n\tEnter all %d grades, each separated by a space:\n", (*numGrades));
-
-    for (int index = 0; index < (*numGrades); index++){
-        fflush(stdin);
-        printf("\t\tGrade %2d of %2d: ", (index+1), (*numGrades));
-        // FIXME: scanf fails here
-        scanf("%d", (students[(*numRecords)-1].grades[index]));
+    // Change the prompt message and binary search check depending on the requested operation
+    if (operation == ADD){
+        strcpy(message, "Enter ID to be added: ");
+        result = 0;
+        binaryCheck = (result != -1);
+    } else {
+        strcpy(message, "Enter ID to be dropped: ");
+        result = -1;
+        binaryCheck = (result == -1);
     }
 
-    // Calculate the average of all grades
-    students[(*numGrades)-1].avg = gradeAvg(students[(*numGrades)-1], (*numGrades));
-
-    // Create the student's account ID
-    snprintf(studentId, ACCT_LENGTH+1, "%d", ID);
-    createAccount(accountId, firstName, middleName, lastName, studentId);
-    strcpy(students[(*numRecords)-1].account, accountId);
-
-    // Re-sort the array
-    sortById(students, (*numRecords));
-}
-
-/*****************************************************************************************************
-    This function drops a student record from the array of structs
-*****************************************************************************************************/
-void dropRecord(Student *students, int *numRecords){
-    int ID, IDSize = 0, reply, result = -1, allDigits = 0;
-    char studentID[ID_LENGTH+1], buffer[32];
-
-    printf("\n\tEnter ID to be dropped: ");
+    printf("\n\t%s", message);
     fflush(stdin);
     scanf("%s", buffer);
     IDSize = strlen(buffer);
-
+    
     // If the ID is not 5 digits long, continue to reprompt
-    // Also, if the ID is not already in the list, continue to reprompt
-    while (IDSize != ID_LENGTH || result == -1 || !allDigits){
+    // Also, if the ID is already in the list, continue to reprompt
+    while (IDSize != ID_LENGTH || binaryCheck || !allDigits){
         // First, check if the ID entered is only digit characters
         allDigits = 1;
         // Loop through each character in the buffer
@@ -536,9 +466,9 @@ void dropRecord(Student *students, int *numRecords){
         }
         // If any character was not a digit, reprompt continue to the start of the next loop
         if (!allDigits){
-            printf("\n\tInvalid ID.\n");
+            printf("\n\tInvalid ID.");
             fflush(stdin);
-            printf("\tEnter the ID to be dropped: ");
+            printf("\n\t%s", message);
             scanf("%s", buffer);
             IDSize = strlen(buffer);
             continue;
@@ -547,9 +477,9 @@ void dropRecord(Student *students, int *numRecords){
         // Next, check if the ID is 5 digits long
         if (IDSize != ID_LENGTH){
             // If not, reprompt and start the loop from the beginning
-            printf("\n\tThe ID should be %d digits long\n", ID_LENGTH);
+            printf("\n\tThe ID should be %d digits long", ID_LENGTH);
             fflush(stdin);
-            printf("\tEnter the ID to be dropped: ");
+            printf("\n\t%s", message);
             scanf("%s", buffer);
             IDSize = strlen(buffer);
             continue;
@@ -561,19 +491,117 @@ void dropRecord(Student *students, int *numRecords){
         ID = atoi(buffer);
         result = binarySearch(students, ID, 0, ((*numRecords)-1), (*numRecords));
 
-        // Next, check if the ID entered does not already exist
-        if (result == -1){
+        // Re-check the binary search prompt and validate
+        if (operation == ADD){
+            binaryCheck = (result != -1);
+        } else {
+            binaryCheck = (result == -1);
+        }
+        // Next, check if the ID entered already exists
+        if (binaryCheck){
             // If so, reprompt
-            printf("\n\tThe ID you entered doesn't exist.\n");
+            // If we are adding records and the ID already exists, reprompt
+            // If we are dropping records and the ID doesn't exist, reprompt
+            if (operation == ADD){
+                printf("\n\tThe ID you entered already exist.");
+            } else {
+                printf("\n\tThe ID you entered doesn't exist.");
+            }
             fflush(stdin);
-            printf("\tEnter the ID to be dropped: ");
+            printf("\n\t%s", message);
             scanf("%s", buffer);
             IDSize = strlen(buffer);
         }
     }
-    // If we reach here, the ID is the correct length and already exists in the array
+    // If we reach here, the ID is valid and we can continue with adding/dropping
 
-    // Now, we can drop the student from the array
+    if (operation == DROP){
+        // Drop the record
+        dropRecord(students, numRecords, ID, result);
+    } else {
+        // Obtain more information from the user, then add the record
+        requestData(students, numRecords, numGrades, ID);
+    }
+}
+
+/*****************************************************************************************************
+    This function is run before adding a student record. It's function is to obtain more data from
+    the user about the student to be added.
+*****************************************************************************************************/
+void requestData(Student *students, int *numRecords, int *numGrades, int ID){
+    int grades[(*numGrades)];
+    char lastName[LAST_NAME_LENGTH],
+        firstName[FIRST_NAME_LENGTH],
+        middleName[MIDDLE_NAME_LENGTH];
+
+    // Obtain first, middle, and last names
+    fflush(stdin);
+    printf("\n");
+    printf("\tEnter First name: ");
+    scanf("%s", &firstName);
+
+    fflush(stdin);
+    printf("\tEnter Middle name: ");
+    scanf("%s", &middleName);
+
+    fflush(stdin);
+    printf("\tEnter Last name: ");
+    scanf("%s", &lastName);
+
+    // Get grades
+    printf("\n\tEnter all %d grades, each separated by a space:\n", (*numGrades));
+    for (int index = 0; index < (*numGrades); index++){
+        fflush(stdin);
+        printf("\t\tGrade %2d of %2d: ", (index+1), (*numGrades));
+        scanf("%d", &grades[index]);
+    }
+
+    // Use the information acquired to add the new student record
+    addRecord(students, numRecords, numGrades, ID, firstName, middleName, lastName, grades);
+}
+
+/*****************************************************************************************************
+    This function adds a student record to the array of structs
+*****************************************************************************************************/
+// void addRecord(Student *students, int *numRecords, int *numGrades)
+void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char firstName[],
+    char middleName[], char lastName[], int grades[]){
+    // TODO: need to also accept int *ID, int *IDSize, int *result, char *buffer from validateID
+    // TODO: uhhh change function so it accepts all input and then calls a function to add the record
+    // with the data. do this bc i need to use same function in the bulk add/drop
+    char studentId[ID_LENGTH+1], accountId[ACCT_LENGTH+1];
+
+    // Increment the size of the array by 1
+    (*numRecords)++;
+
+    // Store data of the new record in the last array element, i.e. (size-1)
+    // Store ID
+    students[(*numRecords)-1].ID = ID;
+
+    // Store first, middle, and last names
+    strcpy(students[(*numRecords)-1].firstName, firstName);
+    strcpy(students[(*numRecords)-1].middleName, middleName);
+    strcpy(students[(*numRecords)-1].lastName, lastName);
+
+    // Store all grades
+    for (int index = 0; index < (*numGrades); index++){
+        students[(*numRecords)-1].grades[index] = grades[index];
+    }
+
+    // Calculate and store the average of all grades
+    students[(*numRecords)-1].avg = gradeAvg(students[(*numRecords)-1], (*numGrades));
+
+    // Create and store the student's account ID
+    snprintf(studentId, ACCT_LENGTH+1, "%d", ID);
+    createAccount(accountId, firstName, middleName, lastName, studentId);
+    strcpy(students[(*numRecords)-1].account, accountId);
+}
+
+/*****************************************************************************************************
+    This function drops a student record from the array of structs
+*****************************************************************************************************/
+void dropRecord(Student *students, int *numRecords, int ID, int result){
+    int reply;
     printf("\n\tThe record that you requested to be dropped is:");
     printf("\n\t%d  ", students[result].ID);
     printf("%s %s %s", students[result].firstName, students[result].middleName, students[result].lastName);
