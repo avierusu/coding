@@ -74,10 +74,6 @@ typedef enum {
     ADD,
     DROP
 } RecordOperation;
-// TODO: Make a validateID() function that does all the ID validation, checking if digits, length,
-// exists or not. called by addDropByStudent and other thangs, uses argument "RecordOperation operation"
-// do determine if you add/drop and print stuff about adding or exists/notexists etc etc. then calls the
-// appropriate add/drop student function which will simply add or drop yus
 
 /*****************************************************************************************************
                                         FUNCTION PROTOTYPES
@@ -87,6 +83,11 @@ void readData(char *inFile, char *outFile, Student students[], int *numRecords, 
 void populateStruct(Student students[], int *numRecords, int *numGrades, char *line);
 void createAccount(char account[], char first[], char middle[], char last[], char ID[]);
 float gradeAvg(Student student, int numGrades);
+// For the UI
+void welcome();
+int menu();
+void processMenu(Student *students, int *numRecords, int *numGrades);
+void printSortedRecords(Student students[], int numRecords);
 // For sorting data
 void sortById(Student students[], int numRecords);
 void sortByGradeAverage(Student students[], int numRecords);
@@ -100,7 +101,14 @@ void validateID(Student *students, int *numRecords, int *numGrades, RecordOperat
 void requestData(Student *students, int *numRecords, int *numGrades, int ID);
 void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char firstName[],
     char middleName[], char lastName[], int grades[]);
-void dropRecord(Student *students, int *numRecords, int ID, int result);
+void confirmDrop(Student *students, int *numRecords, int ID, int result);
+void dropRecord(Student *students, int *numRecords, int result);
+/**
+ * TODO:
+ * bulk add/drop
+ * update record (first)
+ * bulk update
+ */
 // Other
 int binarySearch(Student students[], int searchKey, int low, int high, int size);
 FILE* openFile(char *fileName, char *mode);
@@ -119,13 +127,8 @@ int main(){
     FILE *filePtrBin;
 
     readData(STUD_IN_FILE, OUT_BIN_FILE, students, &recordCount, &gradeCount);
-    printRecords(students, recordCount);
 
-    addDropByStudent(students, &recordCount, &gradeCount);
-    // sortByGradeAverage(students, recordCount);
-    // sortByName(students, recordCount);
-
-    printRecords(students, recordCount);
+    processMenu(students, &recordCount, &gradeCount);
 
     return 0;
 }
@@ -174,12 +177,12 @@ void readData(char *inFile, char *outFile, Student students[], int *numRecords, 
 void populateStruct(Student students[], int *numRecords, int *numGrades, char *line){
     // Create arrays to store the student's first, middle, and last names, as well as their
     // full name, id, and account id
+    int currGrade;
     char lastName[LAST_NAME_LENGTH],
          firstName[FIRST_NAME_LENGTH],
          middleName[MIDDLE_NAME_LENGTH],
          studentId[ID_LENGTH],
-         accountId[ACCT_LENGTH],
-         currGrade[3];
+         accountId[ACCT_LENGTH];
     
     // Set grade amount to 0 and increment by 1 for each grade we store
     *numGrades = 0;
@@ -216,24 +219,35 @@ void populateStruct(Student students[], int *numRecords, int *numGrades, char *l
     }
 
     // Loop through all grades and store them in student struct
-    while (isdigit(*line)){
-        // Read the next grade
-        sscanf(line, "%s", currGrade);
-        // Add the grade to the current student's record
-        students[*numRecords].grades[*numGrades] = atoi(currGrade);
-
-        // TODO: optimize this more
-        // Move "line" to the end of the grade
-        // Each grade takes 3 spaces, plus an extra space
-        line += 3;
-        // Depending on the number of digits the current grade is and the next grade is,
-        // there may be between 0 and 2 extra placeholder spaces here
+    while (1){
+        // Skip leading white spaces
         while (isspace(*line)){
-            line += 1;
+            line++;
         }
+
+        // Check for the end of the line
+        if (*line == '\0'){
+            break;
+        }
+
+        // Store the position for the end of the current grade
+        char *end;
+        // Store the grade
+        currGrade = strtol(line, &end, 10);
+
+        // No valid number found
+        if (line == end){
+            break;
+        }
+
+        // Add the grade to the current student's record
+        students[*numRecords].grades[*numGrades] = currGrade;
 
         // Increment grade count by 1
         (*numGrades)++;
+
+        // Move pointer forward past the parsed number
+        line = end;
     }
     // Store -1 at the end of the array of grades
     students[*numRecords].grades[*numGrades] = -1;
@@ -287,6 +301,146 @@ float gradeAvg(Student student, int numGrades){
     }
 
     return average;
+}
+
+/*****************************************************************************************************
+    This function displays a Welcome screen to the user
+*****************************************************************************************************/
+void welcome(){
+    // Clear the console
+    system("cls");
+    // Display a welcome banner
+    printf("\n\n");
+    printf("\t=====================================================\n");
+    printf("\tR E G I S T R A T I O N   P R O C E S S I N G\n");
+    printf("\t=====================================================\n");
+    printf("\tWelcome to the Registration Processing Program. This\n");
+    printf("\tprogram handles students who register for our course.\n");
+    printf("\tPlease respond to the following menu choice:\n\n");
+}
+
+/*****************************************************************************************************
+    This function displays a menu to the user
+*****************************************************************************************************/
+int menu(){
+    // Store the user's choice
+    int choice = 0;
+
+    // Display the menu options
+    printf("\n\n");
+    printf("\t*************************************************************************************\n");
+    printf("\t                                    M E N U\n");
+    printf("\t                                   ---------\n");
+    printf("\t1. Bulk Add/Drop Students\n");
+    printf("\t2. Add/Drop By Student\n");
+    printf("\t3. Sort Students by Name\n");
+    printf("\t4. Sort Students by Average Grade\n");
+    printf("\t5. Sort Students by ID\n");
+    printf("\t6. Update Grades by Student\n");
+    printf("\t7. Bulk Update Grades\n");
+    printf("\t8. Print Student List\n");
+    printf("\t9. Exit\n");
+    printf("\t*************************************************************************************\n\n");
+    printf("Enter your choice here: ");
+    scanf("%d", &choice);
+    return choice;
+}
+
+/*****************************************************************************************************
+    This function displays the menu to the user and processes their choice. If the user enters
+    an invalid menu choice, reprompts the user
+*****************************************************************************************************/
+void processMenu(Student *students, int *numRecords, int *numGrades){
+    int choice, displayCount = 0;
+    // Display the welcome banner
+    welcome();
+    // Display the menu and accept the user's choice
+    choice = menu();
+
+    // Keep displaying the menu until the user chooses to exit
+    while (choice != 9){
+        // Use a switch to perform different actions depending on the user's choice
+        switch (choice){
+            case 1:
+                // Bulk Add/Drop Students
+                // TODO: make function
+                break;
+            case 2:
+                // Add/Drop By Student
+                addDropByStudent(students, numRecords, numGrades);
+                break;
+            case 3:
+                // Sort Students by Name
+                sortByName(students, *numRecords);
+                // Display the records after sorting
+                printSortedRecords(students, *numRecords);
+                break;
+            case 4:
+                // Sort Students by Average Grade
+                sortByGradeAverage(students, *numRecords);
+                // Display the records after sorting
+                printSortedRecords(students, *numRecords);
+                break;
+            case 5:
+                // Sort Students by ID
+                sortById(students, *numRecords);
+                // Display the records after sorting
+                printSortedRecords(students, *numRecords);
+                break;
+            case 6:
+                // Update Grades by Student
+                // TODO: make function
+                break;
+            case 7:
+                // Bulk Update Grades
+                // TODO: make function
+                break;
+            case 8:
+                // Print Student List
+                // Prompt the user to enter the amount of records to be displayed and store it
+                printf("\n\tA total of %d records are available.", *numRecords);
+                printf("\n\tEnter the number of student records you want to see: ");
+                scanf("%d", &displayCount);
+                
+                // If the user entered an invalid number of records (i.e. < 1 or more than the
+                // total number of records), reprompt
+                while (displayCount < 1 || displayCount > (*numRecords)){
+                    printf("\n\tThere are only %d records in the list", *numRecords);
+                    printf("\n\tEnter a number between 1 and %d: ", *numRecords);
+                    scanf("%d", &displayCount);
+                }
+
+                // Display the requested amount of records
+                printf("\n\n\tThe Top %d records from the list are:\n");
+                printRecords(students, displayCount);
+
+                break;
+            default:
+                // If the user enters an invalid value, display an error message and prompt again
+                printf("\tSorry, that is not a valid selection\n");
+                break;
+        }
+
+        // Display the menu again after the user presses Enter
+        printf("\n > Press ENTER to continue...");
+        getchar();
+        getchar();
+        choice = menu();
+    }
+}
+
+/*****************************************************************************************************
+    This function displays the array of structs after sorting using specific parameters
+*****************************************************************************************************/
+void printSortedRecords(Student students[], int numRecords){
+    // After sorting the array, we want to print up to 20 records. If there is less than 20 total
+    // records, print however many there are
+    if (numRecords > 20){
+        numRecords = 20;
+    }
+
+    printf("\nAfter sorting, the Top %d records from the list are:\n", numRecords);
+    printRecords(students, numRecords);
 }
 
 /*****************************************************************************************************
@@ -394,7 +548,8 @@ void addDropByStudent(Student *students, int *numRecords, int *numGrades){
 
     // Repeatedly prompt the user for input until they decide to quit
     do {
-        printf("\n\t--------------------------------------------------------");
+        printRecords(students, *numRecords);
+        printf("\n\n\t--------------------------------------------------------");
         printf("\n\t\tA - Add a student record");
         printf("\n\t\tD - Drop a student record");
         printf("\n\t\tQ - Quit");
@@ -517,7 +672,7 @@ void validateID(Student *students, int *numRecords, int *numGrades, RecordOperat
 
     if (operation == DROP){
         // Drop the record
-        dropRecord(students, numRecords, ID, result);
+        confirmDrop(students, numRecords, ID, result);
     } else {
         // Obtain more information from the user, then add the record
         requestData(students, numRecords, numGrades, ID);
@@ -566,9 +721,6 @@ void requestData(Student *students, int *numRecords, int *numGrades, int ID){
 // void addRecord(Student *students, int *numRecords, int *numGrades)
 void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char firstName[],
     char middleName[], char lastName[], int grades[]){
-    // TODO: need to also accept int *ID, int *IDSize, int *result, char *buffer from validateID
-    // TODO: uhhh change function so it accepts all input and then calls a function to add the record
-    // with the data. do this bc i need to use same function in the bulk add/drop
     char studentId[ID_LENGTH+1], accountId[ACCT_LENGTH+1];
 
     // Increment the size of the array by 1
@@ -598,10 +750,11 @@ void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char 
 }
 
 /*****************************************************************************************************
-    This function drops a student record from the array of structs
+    This function is run before dropping a record. It's function is to confirm whether or not
+    the user wants to drop the requested student record
 *****************************************************************************************************/
-void dropRecord(Student *students, int *numRecords, int ID, int result){
-    int reply;
+void confirmDrop(Student *students, int *numRecords, int ID, int result){
+    char reply;
     printf("\n\tThe record that you requested to be dropped is:");
     printf("\n\t%d  ", students[result].ID);
     printf("%s %s %s", students[result].firstName, students[result].middleName, students[result].lastName);
@@ -614,21 +767,28 @@ void dropRecord(Student *students, int *numRecords, int ID, int result){
     scanf(" %c", &reply);
     if ( toupper(reply) == 'Y' ){
         // If the user chooses to drop the grade, then drop it from the array
-        for (int index = result; index < (*numRecords)-1; index++){
-            // Move all elements after the chosen record's index up by one
-            students[index] = students[index+1];
-            // *(students+index) = *(students+index+1);
-        }
-
-        // Clear the last record (optional but recommended for safety)
-        memset(&students[(*numRecords) - 1], 0, sizeof(Student));
-        // Reduce the size of the array by 1
-        (*numRecords)--;
+        dropRecord(students, numRecords, result);
         printf("\n\tSuccessfully dropped the record with ID \"%d\"\n", ID);
     } else {
-        // If the user replies with somthing other than 'Y':
-        printf("\n\tYou chose not to drop the record with ID #%d\n", ID);
+        // If the user replies with something other than 'Y':
+        printf("\n\tYou chose not to drop the record with ID #\"%d\"\n", ID);
     }
+}
+
+/*****************************************************************************************************
+    This function drops a student record from the array of structs
+*****************************************************************************************************/
+void dropRecord(Student *students, int *numRecords, int result){
+    for (int index = result; index < (*numRecords)-1; index++){
+        // Move all elements after the chosen record's index up by one
+        students[index] = students[index+1];
+        // *(students+index) = *(students+index+1);
+    }
+
+    // Clear the last record (optional but recommended for safety)
+    memset(&students[(*numRecords) - 1], 0, sizeof(Student));
+    // Reduce the size of the array by 1
+    (*numRecords)--;
 }
 
 /*****************************************************************************************************
