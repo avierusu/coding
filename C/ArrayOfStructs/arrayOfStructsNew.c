@@ -72,7 +72,8 @@ typedef enum {
 // the user inputs while displaying the appropriate messages for the operation
 typedef enum {
     ADD,
-    DROP
+    DROP,
+    UPDATE
 } RecordOperation;
 
 /*****************************************************************************************************
@@ -98,11 +99,13 @@ void swap(Student *inArray, int firstIndex, int secondIndex);
 // For adding or dropping student records
 void addDropByStudent(Student *students, int *numRecords, int *numGrades);
 void validateID(Student *students, int *numRecords, int *numGrades, RecordOperation operation);
-void requestData(Student *students, int *numRecords, int *numGrades, int ID);
+void requestData(Student *students, int *numRecords, int *numGrades, int ID, int result, RecordOperation operation);
 void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char firstName[],
     char middleName[], char lastName[], int grades[]);
+void updateGrades(Student *students, int *numGrades, int result, int ID, int grades[]);
 void confirmDrop(Student *students, int *numRecords, int ID, int result);
 void dropRecord(Student *students, int *numRecords, int result);
+// For updating student records
 /**
  * TODO:
  * bulk add/drop
@@ -353,7 +356,7 @@ int menu(){
 void processMenu(Student *students, int *numRecords, int *numGrades){
     int choice, displayCount = 0;
     // Display the welcome banner
-    welcome();
+    // welcome();
     // Display the menu and accept the user's choice
     choice = menu();
 
@@ -389,7 +392,7 @@ void processMenu(Student *students, int *numRecords, int *numGrades){
                 break;
             case 6:
                 // Update Grades by Student
-                // TODO: make function
+                validateID(students, numRecords, numGrades, UPDATE);
                 break;
             case 7:
                 // Bulk Update Grades
@@ -548,7 +551,6 @@ void addDropByStudent(Student *students, int *numRecords, int *numGrades){
 
     // Repeatedly prompt the user for input until they decide to quit
     do {
-        printRecords(students, *numRecords);
         printf("\n\n\t--------------------------------------------------------");
         printf("\n\t\tA - Add a student record");
         printf("\n\t\tD - Drop a student record");
@@ -591,12 +593,16 @@ void validateID(Student *students, int *numRecords, int *numGrades, RecordOperat
     bool binaryCheck;
 
     // Change the prompt message and binary search check depending on the requested operation
-    if (operation == ADD){
+    if (operation == DROP){
+        strcpy(message, "Enter ID to be dropped: ");
+        result = -1;
+        binaryCheck = (result == -1);
+    } else if (operation == ADD) {
         strcpy(message, "Enter ID to be added: ");
         result = 0;
         binaryCheck = (result != -1);
     } else {
-        strcpy(message, "Enter ID to be dropped: ");
+        strcpy(message, "Enter ID to be updated: ");
         result = -1;
         binaryCheck = (result == -1);
     }
@@ -657,10 +663,10 @@ void validateID(Student *students, int *numRecords, int *numGrades, RecordOperat
             // If so, reprompt
             // If we are adding records and the ID already exists, reprompt
             // If we are dropping records and the ID doesn't exist, reprompt
-            if (operation == ADD){
-                printf("\n\tThe ID you entered already exist.");
-            } else {
+            if (operation == DROP){
                 printf("\n\tThe ID you entered doesn't exist.");
+            } else {
+                printf("\n\tThe ID you entered already exists.");
             }
             fflush(stdin);
             printf("\n\t%s", message);
@@ -673,9 +679,11 @@ void validateID(Student *students, int *numRecords, int *numGrades, RecordOperat
     if (operation == DROP){
         // Drop the record
         confirmDrop(students, numRecords, ID, result);
-    } else {
+    } else if (operation == ADD) {
         // Obtain more information from the user, then add the record
-        requestData(students, numRecords, numGrades, ID);
+        requestData(students, numRecords, numGrades, ID, result, ADD);
+    } else {
+        requestData(students, numRecords, numGrades, ID, result, UPDATE);
     }
 }
 
@@ -683,36 +691,44 @@ void validateID(Student *students, int *numRecords, int *numGrades, RecordOperat
     This function is run before adding a student record. It's function is to obtain more data from
     the user about the student to be added.
 *****************************************************************************************************/
-void requestData(Student *students, int *numRecords, int *numGrades, int ID){
+void requestData(Student *students, int *numRecords, int *numGrades, int ID, int result, RecordOperation operation){
+    // TODO: Implement update in this function
     int grades[(*numGrades)];
     char lastName[LAST_NAME_LENGTH],
         firstName[FIRST_NAME_LENGTH],
         middleName[MIDDLE_NAME_LENGTH];
 
-    // Obtain first, middle, and last names
-    fflush(stdin);
-    printf("\n");
-    printf("\tEnter First name: ");
-    scanf("%s", &firstName);
+    // If we are adding a new record, obtain first, middle, and last names
+    if (operation == ADD){
+        fflush(stdin);
+        printf("\n");
+        printf("\tEnter First name: ");
+        scanf("%s", &firstName);
 
-    fflush(stdin);
-    printf("\tEnter Middle name: ");
-    scanf("%s", &middleName);
+        fflush(stdin);
+        printf("\tEnter Middle name: ");
+        scanf("%s", &middleName);
 
-    fflush(stdin);
-    printf("\tEnter Last name: ");
-    scanf("%s", &lastName);
+        fflush(stdin);
+        printf("\tEnter Last name: ");
+        scanf("%s", &lastName);
+    }
 
     // Get grades
-    printf("\n\tEnter all %d grades, each separated by a space:\n", (*numGrades));
+    printf("\n\tEnter %d grades:\n", (*numGrades));
     for (int index = 0; index < (*numGrades); index++){
         fflush(stdin);
         printf("\t\tGrade %2d of %2d: ", (index+1), (*numGrades));
         scanf("%d", &grades[index]);
     }
 
-    // Use the information acquired to add the new student record
-    addRecord(students, numRecords, numGrades, ID, firstName, middleName, lastName, grades);
+    // If we are updating a record
+    if (operation == UPDATE){
+        updateGrades(students, numGrades, result, ID, grades);
+    } else {
+        // Otherwise, add the new record using the information acquired
+        addRecord(students, numRecords, numGrades, ID, firstName, middleName, lastName, grades);
+    }
 }
 
 /*****************************************************************************************************
@@ -747,6 +763,22 @@ void addRecord(Student *students, int *numRecords, int *numGrades, int ID, char 
     snprintf(studentId, ACCT_LENGTH+1, "%d", ID);
     createAccount(accountId, firstName, middleName, lastName, studentId);
     strcpy(students[(*numRecords)-1].account, accountId);
+}
+
+/*****************************************************************************************************
+    This function updates the grades for a student, given their ID and their new grades
+*****************************************************************************************************/
+void updateGrades(Student *students, int *numGrades, int result, int ID, int grades[]){
+    // Loop through the student's grades and update each of them to the new grade
+    for (int grade = 0; grade < *numGrades; grade++){
+        students[result].grades[grade] = grades[grade];
+    }
+
+    // Calculate and store the average of all grades
+    students[result].avg = gradeAvg(students[result], (*numGrades));
+
+    // Display a success message
+    printf("\n\tSuccessfully updated grades of record with ID: %d\n", ID);
 }
 
 /*****************************************************************************************************
