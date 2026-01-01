@@ -50,9 +50,20 @@ float gradeAvg(element *student, int numGrades);
 void welcome();
 int menu();
 void processMenu(Node **student, int *numRecords, int *numGrades);
+// For adding, updating, and dropping student records
+void addDropByStudent(Node **student, int *numGrades);
+void validateID(Node **student, int *numGrades, RecordOperation operation);
+void searchList(Node **currNode, Node **prevNode, int ID);
+void requestData(Node **student, int *numGrades, int ID, int result, RecordOperation operation);
+void addRecord(Node **student, int *numGrades, int ID, char firstName[],
+    char middleName[], char lastName[], int grades[]);
+void updateGrades(Node **student, int result, int ID, int grades[]);
+void confirmDrop(Node **student, int ID, int result);
+void dropRecord(Node **student, int result);
 // Other
 FILE* openFile(char *fileName, char *mode);
 void printRecords(Node *student);
+void printSingleRecord(Node *student, int index);
 
 /*****************************************************************************************************
                                             MAIN FUNCTION
@@ -409,6 +420,220 @@ void processMenu(Node **student, int *numRecords, int *numGrades){
 }
 
 /*****************************************************************************************************
+    This function adds or drops a student record when the user enters an 'A' or a 'D' in the command
+    line.
+*****************************************************************************************************/
+void addDropByStudent(Node **student, int *numGrades){
+    // Create a variable to store the user's choice of whether to add a student ('A'), drop a
+    // student ('D'), or quit out of the prompts ('Q')
+    char choice;
+
+    // Repeatedly prompt the user for input until they decide to quit
+    do {
+        printf("\n\n\t--------------------------------------------------------");
+        printf("\n\t\tA - Add a student record");
+        printf("\n\t\tD - Drop a student record");
+        printf("\n\t\tQ - Quit");
+        printf("\n\tEnter your choice: ");
+        // Store the user's input
+        scanf(" %c", &choice);
+
+        // Process the user's input
+        switch (toupper(choice)){
+            case 'Q':
+                // Exit the loop
+                break;
+            case 'A':
+                // Add a student record
+                validateID(student, numGrades, ADD);
+                break;
+            case 'D':
+                // Drop a student record
+                validateID(student, numGrades, DROP);
+                break;
+            default:
+                // Any invalid option
+                printf("\n\t\tInvalid choice.\n");
+        }
+    } while (toupper(choice) != 'Q');
+}
+
+/*****************************************************************************************************
+    This function is ran before adding or dropping a student record. It's function is to accept an ID
+    from the user and run it through various checks to validate whether or not it is valid.
+*****************************************************************************************************/
+void validateID(Node **headNode, int *numGrades, RecordOperation operation){
+    // Create a temporary node to traverse through the linked list with
+    Node *currNode, *prevNode = NULL;
+    int ID, IDSize, allDigits = 0;
+    char buffer[32], message[32];
+    bool binaryCheck;
+
+    // Change the prompt message and binary search check depending on the requested operation
+    if (operation == DROP){
+        strcpy(message, "Enter ID to be dropped: ");
+        currNode = NULL;
+        binaryCheck = (currNode == NULL);
+    } else if (operation == ADD) {
+        strcpy(message, "Enter ID to be added: ");
+        currNode = (*headNode);
+        binaryCheck = (currNode != NULL);
+    } else {
+        strcpy(message, "Enter ID to be updated: ");
+        currNode = NULL;
+        binaryCheck = (currNode == NULL);
+    }
+
+    printf("\n\t%s", message);
+    fflush(stdin);
+    scanf("%s", buffer);
+    IDSize = strlen(buffer);
+    
+    // If the ID is not 5 digits long, continue to reprompt
+    // Also, if the ID is already in the list, continue to reprompt
+    while (IDSize != ID_LENGTH || binaryCheck || !allDigits){
+        // First, check if the ID entered is only digit characters
+        allDigits = 1;
+        // Loop through each character in the buffer
+        for (int index = 0; index < IDSize; index++){
+            if (!isdigit((unsigned char)buffer[index])){
+                // If a character is not a digit, break out of the loop
+                allDigits = 0;
+                break;
+            }
+        }
+        // If any character was not a digit, reprompt continue to the start of the next loop
+        if (!allDigits){
+            printf("\n\tInvalid ID.");
+            fflush(stdin);
+            printf("\n\t%s", message);
+            scanf("%s", buffer);
+            IDSize = strlen(buffer);
+            continue;
+        }
+
+        // Next, check if the ID is 5 digits long
+        if (IDSize != ID_LENGTH){
+            // If not, reprompt and start the loop from the beginning
+            printf("\n\tThe ID should be %d digits long", ID_LENGTH);
+            fflush(stdin);
+            printf("\n\t%s", message);
+            scanf("%s", buffer);
+            IDSize = strlen(buffer);
+            continue;
+        }
+        // If we reach here, the ID is the correct length
+        
+        // Once the ID entered is all digits and the correct length,
+        // convert to int and search to see if the ID already exists
+        ID = atoi(buffer);
+        // Reset the current node and previous node so we can traverse through the list from the beginning
+        currNode = (*headNode);
+        prevNode = NULL;
+        // Traverse through the linked list to search for the requested ID
+        searchList(&currNode, &prevNode, ID);
+
+        // Re-check the binary search prompt and validate
+        if (operation == ADD){
+            binaryCheck = (currNode != NULL);
+        } else {
+            binaryCheck = (currNode == NULL);
+        }
+        // Next, check if the ID entered already exists
+        if (binaryCheck){
+            // If so, reprompt
+            // If we are adding records and the ID already exists, reprompt
+            // If we are dropping records and the ID doesn't exist, reprompt
+            if (operation == ADD){
+                printf("\n\tThe ID you entered already exists.");
+            } else {
+                printf("\n\tThe ID you entered doesn't exist.");
+            }
+            fflush(stdin);
+            printf("\n\t%s", message);
+            scanf("%s", buffer);
+            IDSize = strlen(buffer);
+        }
+    }
+    // If we reach here, the ID is valid and we can continue with adding/dropping
+
+    if (operation == DROP){
+        // Drop the record
+        // TODO: Make these functions
+        // confirmDrop(currNode, ID, result);
+    } else if (operation == ADD) {
+        // Obtain more information from the user, then add the record
+        // requestData(currNode, numGrades, ID, result, ADD);
+    } else {
+        // requestData(currNode, numGrades, ID, result, UPDATE);
+    }
+}
+
+/*****************************************************************************************************
+    This function traverses through the linked list to search for a particular ID. If the ID is
+    found, we exit the function, and currNode will point to the node containing the student with
+    the requested ID. If the ID is not found, currNode will point to null
+*****************************************************************************************************/
+void searchList(Node **currNode, Node **prevNode, int ID){
+    // Traverse through the list until we reach the end
+    while (*currNode != NULL){
+        // Check if the current node contains the requested ID
+        if ((*currNode)->data.ID == ID){
+            // This means the student already exists
+            // We can now exit the function
+            // printf("ID %d found in the list\n", ID);
+            // printSingleRecord(*currNode, 1);
+            return;
+        }
+
+        // Move to the next node in the list
+        *prevNode = *currNode;
+        *currNode = (*currNode)->nextNode;
+    }
+    // If we traverse through the entire list and do not find the ID before currNode points to NULL
+    // (i.e. we reached the end of the list), this means the student does not exist
+    // printf("ID not found in the list.\n");
+}
+
+/*****************************************************************************************************
+    This function is run before adding a student record. It's function is to obtain more data from
+    the user about the student to be added.
+*****************************************************************************************************/
+void requestData(Node **student, int *numGrades, int ID, int result, RecordOperation operation){
+    // TODO: make the function
+}
+
+/*****************************************************************************************************
+    This function adds a student record to the array of structs
+*****************************************************************************************************/
+void addRecord(Node **student, int *numGrades, int ID, char firstName[],
+    char middleName[], char lastName[], int grades[]){
+    // TODO: make the function
+}
+
+/*****************************************************************************************************
+    This function updates the grades for a student, given their ID and their new grades
+*****************************************************************************************************/
+void updateGrades(Node **student, int result, int ID, int grades[]){
+    // TODO: make the function
+}
+
+/*****************************************************************************************************
+    This function is run before dropping a record. It's function is to confirm whether or not
+    the user wants to drop the requested student record
+*****************************************************************************************************/
+void confirmDrop(Node **student, int ID, int result){
+    // TODO: make the function
+}
+
+/*****************************************************************************************************
+    This function drops a student record from the array of structs
+*****************************************************************************************************/
+void dropRecord(Node **student, int result){
+    // TODO: make the function
+}
+
+/*****************************************************************************************************
     This function opens the requested file. If the file cannot be opened, exit the program
 *****************************************************************************************************/
 FILE* openFile(char *fileName, char *mode){
@@ -435,13 +660,16 @@ void printRecords(Node *student){
     printf("-------------------------------------------------------------------------------------\n");
 
     for (int index = 1; student != NULL; index++){
-        printf("%03d: ", index+1);
-        printf("   %d", student->data.ID);
-        printf("\t%-10s %-10s %-15s", student->data.firstName, student->data.middleName, student->data.lastName);
-        printf("%-.7s", student->data.account);
-        printf("%s ", student->data.ssn);
-        printf("\t%5.2f\n", student->data.avg);
-
+        printSingleRecord(student, index);
         student = student->nextNode;
     }
+}
+
+void printSingleRecord(Node *student, int index){
+    printf("%03d: ", index);
+    printf("   %d", student->data.ID);
+    printf("\t%-10s %-10s %-15s", student->data.firstName, student->data.middleName, student->data.lastName);
+    printf("%-.7s", student->data.account);
+    printf("%s ", student->data.ssn);
+    printf("\t%5.2f\n", student->data.avg);
 }
